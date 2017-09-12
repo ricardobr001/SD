@@ -106,24 +106,15 @@ class Processo:
         mensagem, ack = self.cria_msg(choice(string.letters))
 
         # Criando meu socket
-        meu_socket = socket(AF_INET, SOCK_STREAM)
+        meu_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
         # Conectando com os outros processos
-        # meu_socket.connect((HOST, 25000))
+        meu_socket.connect((HOST, 25000))
 
         # Enviando a mensagem e o ack para os outros processos
-        print 'Enviando a mensagem'
-        meu_socket.connect((HOST, 25000))
-        mensagem_codificada = pickle.dumps(mensagem)
-        meu_socket.sendall(mensagem_codificada)
-        meu_socket.close()
+        meu_socket.send(mensagem)
+        meu_socket.send(ack)
 
-        print 'Enviando o ack'
-        meu_socket = socket(AF_INET, SOCK_STREAM)
-        meu_socket.connect((HOST, 25000))
-        ack_codificado = pickle.dumps(ack)
-        meu_socket.sendall(ack_codificado)
-        meu_socket.close()
 
     def mostra_processo(self):
         print 'clock_processo: ', self.clock_processo
@@ -184,44 +175,3 @@ while True:
     # thread = Thread(target = minha.recebendo_dados(conn, addr))
     # thread.start()
     #thread.join()
-
-# processo = Processo(1, "23")
-# processo.envia_msg()
-# processo = Processo(1, "23")
-# # processo.mostra_processo()
-# processo.incrementa_clock()
-# # processo.mostra_processo()
-# processo.cria_msg("Teste")
-# #ack = Ack("23")
-# #processo.recebe_ack(ack)
-# # print processo.vetor_ack[0].id
-# # print processo.vetor_ack[0].n_acks
-# #processo.recebe_ack(ack)
-# # print processo.vetor_ack[0].id
-# # print processo.vetor_ack[0].n_acks
-# ack_novo = Ack("12")
-# processo.recebe_ack(ack_novo)
-# ack_novo_3 = Ack("91")
-# processo.recebe_ack(ack_novo_3)
-# ack_novo_4 = Ack("17")
-# processo.recebe_ack(ack_novo_4)
-# # print processo.vetor_ack[0].id
-# # print processo.vetor_ack[0].n_acks
-# print 'id\tacks\tpos'
-# for index in range(len(processo.vetor_ack)):
-#     print processo.vetor_ack[index].id,'\t',processo.vetor_ack[index].n_acks,'\t',index
-#
-# ack_novo_5 = Ack("23")
-# processo.recebe_ack(ack_novo_5)
-# ack_novo_6 = Ack("23")
-# processo.recebe_ack(ack_novo_6)
-#
-# print '\n\nid\tacks\tpos'
-# for index in range(len(processo.vetor_ack)):
-#     print processo.vetor_ack[index].id,'\t',processo.vetor_ack[index].n_acks,'\t',index
-#
-# print 'Testando rand'
-# print(randint(0,9))
-#
-# print '\n\nTestando rand letras'
-# print choice(string.letters)
