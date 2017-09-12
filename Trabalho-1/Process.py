@@ -20,27 +20,35 @@ class Processo:
 
     # Definiçaõ do método que recebe um ack
     def recebe_ack(self, ack):
-        flag = 0
 
-        # Se o ack não estiver na lista de acks
-        for i in len(self.vetor_ack):
+        # flag que marca se encontrou ou não determinado ack
+        flag = False
+
+        # Se o ack estiver na lista de acks
+        for i in range(len(self.vetor_ack)):
             if ack.id == self.vetor_ack[i].id:
 
-                # Conta que recebeu um determinado ack, e coloca esse ack no vetor de acks
-                ack.n_acks += 1
-                self.vetor_ack.insert(len(self.vetor_ack), ack)
+                flag = True                         # Marcamos na flag que encontramos o ack
+
+                if self.vetor_ack[i].n_acks != 3:
+                    self.vetor_ack[i].n_acks += 1       # Contamos que recebemos mais um ack
+
+                # Se tiver 3 acks e a mensagem, sobe o ack para a aplicação
+                if self.vetor_ack[i].n_acks == 3:
+                    print 'entrou no ifzera'
+                    self.remove_msg(self.vetor_ack[i])
+                    break
+
                 # self.vetor_ack = sorted(self.vetor_ack, key = Ack.get_id) ################ Testando ordenação de objetos
 
-        else:
+        # Se não encontramos o ack
+        if not flag:
 
-            # Busca o ack na lista de acks, retorna seu indíce e contabiliza mais um ack deste determinado ack
-            i = self.vetor_ack.index(ack)
-            self.vetor_ack[i].n_acks += 1
+            # inserimos o novo ack no vetor de acks
+            ack.n_acks += 1
+            self.vetor_ack.insert(len(self.vetor_ack), ack)
 
-            # Se tiver 3 acks e a mensagem, sobe o ack para a aplicação
-            if self.vetor_ack[i].n_acks == 3:
-                print 'entrou no ifzera'
-                self.remove_msg(ack)
+
                     #subir(self.vetor_ack[i])
 
     # Definição do método que recebe mensagem
@@ -51,6 +59,8 @@ class Processo:
 
             # Inserimos ela no vetor de mensagens e ordenamos o vetor
             self.vetor_msg.insert(len(self.vetor_msg), msg)
+            # print 'tipo do vetor'
+            # print self.vetor_msg
             self.vetor_msg = sorted(self.vetor_msg, key = Mensagem.get_clock)
 
         # Caso contrário não fazemos nada
@@ -59,11 +69,11 @@ class Processo:
     def remove_msg(self, ack):
 
         # Primeiramente andamos a lista procurando se a mensagem com o respectivo id está no vetor de mensagens
-        for i in len(self.vetor_ack):
+        for i in range(len(self.vetor_ack)):
 
             # Se estiver, removemos ambos, caso contrário não fazemos nada
             if self.vetor_msg[i].id == ack.id:
-                print 'subiu para aplicação a mensagem', self.vetor_msg[i].msg
+                print 'subiu para aplicação a mensagem:', '"',self.vetor_msg[i].msg,'"'
                 del self.vetor_msg[i]
                 self.vetor_ack.remove(ack)
 
