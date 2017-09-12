@@ -20,14 +20,16 @@ class Processo:
 
     # Definiçaõ do método que recebe um ack
     def recebe_ack(self, ack):
+        flag = 0
 
         # Se o ack não estiver na lista de acks
-        if not ack in self.vetor_ack:
+        for i in len(self.vetor_ack):
+            if ack.id == self.vetor_ack[i].id:
 
-            # Conta que recebeu um determinado ack, e coloca esse ack no vetor de acks
-            ack.n_acks += 1
-            self.vetor_ack.insert(len(self.vetor_ack), ack)
-            # self.vetor_ack = sorted(self.vetor_ack, key = Ack.get_id) ################ Testando ordenação de objetos
+                # Conta que recebeu um determinado ack, e coloca esse ack no vetor de acks
+                ack.n_acks += 1
+                self.vetor_ack.insert(len(self.vetor_ack), ack)
+                # self.vetor_ack = sorted(self.vetor_ack, key = Ack.get_id) ################ Testando ordenação de objetos
 
         else:
 
@@ -37,7 +39,8 @@ class Processo:
 
             # Se tiver 3 acks e a mensagem, sobe o ack para a aplicação
             if self.vetor_ack[i].n_acks == 3:
-                print 'subiu para aplicação a mensagem'
+                print 'entrou no ifzera'
+                self.remove_msg(ack)
                     #subir(self.vetor_ack[i])
 
     # Definição do método que recebe mensagem
@@ -52,11 +55,37 @@ class Processo:
 
         # Caso contrário não fazemos nada
 
+    # Definição do método que remove uma mensagem e seus acks das listas
+    def remove_msg(self, ack):
+
+        # Primeiramente andamos a lista procurando se a mensagem com o respectivo id está no vetor de mensagens
+        for i in len(self.vetor_ack):
+
+            # Se estiver, removemos ambos, caso contrário não fazemos nada
+            if self.vetor_msg[i].id == ack.id:
+                print 'subiu para aplicação a mensagem', self.vetor_msg[i].msg
+                del self.vetor_msg[i]
+                self.vetor_ack.remove(ack)
+
+
     # Definição do método para criar uma mensagem
     def cria_msg(self, msg):
-        clock_msg = str(self.clock_processo) + self.id
+        clock_msg = str(self.clock_processo) + self.id      # Criando o clock da mensagem
         mensagem = Mensagem(clock_msg, msg, self.id)
-        print mensagem.clock_msg
+        self.recebe_msg(mensagem)                           # A mensagem criada já é adicionada no vetor de mensagens
+        ack = Ack(self.id)                                  # E seu respectivo ack também é criado
+        self.recebe_ack(ack)
+
+        print 'Clock_msg:', self.vetor_msg[0].clock_msg
+        print 'Id_mensagem:', self.vetor_msg[0].id
+        print 'Mensagem:', self.vetor_msg[0].msg,'\n'
+        print 'Id do ack:', self.vetor_ack[0].id
+        print 'Qtd de acks:', self.vetor_ack[0].n_acks,'\n'
+
+    def mostra_processo(self):
+        print 'clock_processo: ', self.clock_processo
+        print 'id: ', self.id
+        print 'incremento do clock: ', self.incremento_clock, "\n"
 
 # Definindo uma mensagem
 class Mensagem:
@@ -77,15 +106,16 @@ class Ack:
     def get_id(self):
         return self.id
 
-print 'teste'
 processo = Processo(1, "23")
+# processo.mostra_processo()
 processo.incrementa_clock()
-processo.cria_msg("MILEY BURRO")
-ack = Ack("23")
-processo.recebe_ack(ack)
+# processo.mostra_processo()
+processo.cria_msg("Teste")
+#ack = Ack("23")
+#processo.recebe_ack(ack)
 # print processo.vetor_ack[0].id
 # print processo.vetor_ack[0].n_acks
-processo.recebe_ack(ack)
+#processo.recebe_ack(ack)
 # print processo.vetor_ack[0].id
 # print processo.vetor_ack[0].n_acks
 ack_novo = Ack("12")
@@ -100,7 +130,14 @@ print 'id\tacks\tpos'
 for index in range(len(processo.vetor_ack)):
     print processo.vetor_ack[index].id,'\t',processo.vetor_ack[index].n_acks,'\t',index
 
+ack_novo_5 = Ack("23")
+processo.recebe_ack(ack_novo_5)
+ack_novo_6 = Ack("23")
+processo.recebe_ack(ack_novo_6)
 
+print '\n\nid\tacks\tpos'
+for index in range(len(processo.vetor_ack)):
+    print processo.vetor_ack[index].id,'\t',processo.vetor_ack[index].n_acks,'\t',index
 
 
 # Fila de mensagens (variavel global)
