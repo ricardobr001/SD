@@ -10,6 +10,7 @@ import sys
 import signal
 import time
 import struct
+import operator
 
 # Definindo um processo
 class Processo:
@@ -52,6 +53,10 @@ class Processo:
             ack.n_acks += 1
             self.vetor_ack.insert(len(self.vetor_ack), ack)
 
+        print '\n\nid\tacks\tpos'
+        for index in range(len(self.vetor_ack)):
+            print self.vetor_ack[index].id,'\t',self.vetor_ack[index].n_acks,'\t',index
+
 
                     #subir(self.vetor_ack[i])
 
@@ -75,7 +80,12 @@ class Processo:
             self.vetor_msg.insert(len(self.vetor_msg), msg)
             # print 'tipo do vetor'
             # print self.vetor_msg
-            self.vetor_msg = sorted(self.vetor_msg, key = Mensagem.get_clock)
+            self.vetor_msg = sorted(self.vetor_msg, key = lambda mensagem: (Mensagem.get_clock, Mensagem.get_id))
+
+            print '\n\nclock\tid\tpos\tconteudo'
+            for index in range(len(self.vetor_msg)):
+                print self.vetor_msg[index].clock_msg,'\t',self.vetor_msg[index].id,'\t',index,'\t',self.vetor_msg[index].msg
+
             ack = Ack(msg.id)
             self.verifica_subir()
             return ack
@@ -94,8 +104,8 @@ class Processo:
     # Definição do método para criar uma mensagem
     def cria_msg(self, msg):
         clock_msg = self.clock_processo                 # Criando o clock da mensagem
-        mensagem = Mensagem(clock_msg, msg, self.id)
-        self.recebe_msg(mensagem)                           # A mensagem criada já é adicionada no vetor de mensagens
+        mensagem = Mensagem(clock_msg, msg, str(self.clock_processo) + str(self.id))
+        # self.recebe_msg(mensagem)                           # A mensagem criada já é adicionada no vetor de mensagens
         # ack = Ack(self.id)                                  # E seu respectivo ack também é criado
         # self.recebe_ack(ack)
 
@@ -122,7 +132,7 @@ class Processo:
         meu_socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
 
         # Enviando a mensagem e o ack para os outros processos
-        print 'Enviando a mensagem'
+        # print 'Enviando a mensagem'
         mensagem_codificada = pickle.dumps(mensagem)
         meu_socket.sendto(mensagem_codificada, (infoaddr[4][0], PORT))
         meu_socket.close()
@@ -141,7 +151,7 @@ class Processo:
         meu_socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
 
         # Enviando o ack
-        print 'Enviando o ack'
+        # print 'Enviando o ack'
         ack_codificado = pickle.dumps(ack)
         meu_socket.sendto(ack_codificado, (infoaddr[4][0], PORT))
         # meu_socket.close()
@@ -161,6 +171,9 @@ class Mensagem:
     def get_clock(self):
         return self.clock_msg
 
+    def get_id(self):
+        return self.id
+
 # Definindo um ack
 class Ack:
     def __init__(self, id):
@@ -169,6 +182,13 @@ class Ack:
 
     def get_id(self):
         return self.id
+
+# def compara_clocks():
+#     if msg1.clock_msg > msg2.clocm_msg:
+#         return msg.get_clock
+#     else:
+#         return msg.get_id
+
 
 # Definindo a thread que recebe dados
 def thread_recebe():
@@ -195,7 +215,7 @@ def thread_recebe():
         decodificada = pickle.loads(data)
 
         if isinstance(decodificada, (Mensagem)):
-            print 'Recebendo mensagem da máquina', addr,'\n'
+            # print 'Recebendo mensagem da máquina', addr,'\n'
             ack = processo.recebe_msg(decodificada)
             processo.envia_ack(ack)
             # print 'mensagem'
@@ -204,7 +224,7 @@ def thread_recebe():
             # print 'Mensagem:', decodificada.msg
 
         if isinstance(decodificada, (Ack)):
-            print 'Recebendo ack da máquina', addr,'\n'
+            # print 'Recebendo ack da máquina', addr,'\n'
             processo.recebe_ack(decodificada)
             # print 'Ack'
             # print 'ID_Ack:', decodificada.id
@@ -217,10 +237,10 @@ def thread_gera():
     global processo
 
     while True:
+        time.sleep(10)
+
         mensagem = processo.cria_msg(choice(string.letters))
         processo.envia_msg()
-
-        time.sleep(10)
 
 # Definindo a thread do clock
 def thread_clock():
@@ -231,7 +251,7 @@ def thread_clock():
 
         time.sleep(2)
 
-processo = Processo(randint(0,9), "23")
+processo = Processo(randint(0,9), sys.argv[2])
 HOST = 'localhost'
 GRUPO = "224.0.27.1"
 TTL = 1
