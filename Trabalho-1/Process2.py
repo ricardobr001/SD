@@ -37,11 +37,14 @@ class Processo:
 
                 flag = True                         # Marcamos na flag que encontramos o ack
 
-                self.vetor_ack[i].n_acks += 1       # Contamos que recebemos mais um ack
+                if self.vetor_ack[i].n_acks != 3:
+                    self.vetor_ack[i].n_acks += 1       # Contamos que recebemos mais um ack
 
-            # Se tiver 3 acks e a mensagem, sobe o ack para a aplicação
-            self.verifica_subir()
-
+                # Se tiver 3 acks e a mensagem, sobe o ack para a aplicação
+                if self.vetor_ack[i].n_acks == 3:
+                    print 'entrou no ifzera'
+                    self.remove_msg(self.vetor_ack[i])
+                    break
 
                 # self.vetor_ack = sorted(self.vetor_ack, key = Ack.get_id) ################ Testando ordenação de objetos
 
@@ -55,45 +58,37 @@ class Processo:
 
                     #subir(self.vetor_ack[i])
 
-    def verifica_subir(self):
-
-        for i in range(len(self.vetor_ack)):
-            if int(self.vetor_msg[0].id) == int(self.vetor_ack[i].id) & self.vetor_ack[i].n_acks == 3:
-                self.remove_msg(self.vetor_ack[i])
-
     # Definição do método que recebe mensagem
     def recebe_msg(self, msg):
 
         # Se está mensagem não estiver no vetor
         if not msg in self.vetor_msg:
 
-            # Verificando o clock da mensagem
-            if msg.clock_msg > self.clock_processo:
-                self.clock_processo = msg.clock_msg + 1
-
             # Inserimos ela no vetor de mensagens e ordenamos o vetor
             self.vetor_msg.insert(len(self.vetor_msg), msg)
             # print 'tipo do vetor'
             # print self.vetor_msg
             self.vetor_msg = sorted(self.vetor_msg, key = Mensagem.get_clock)
-            ack = Ack(msg.id)
-            self.verifica_subir()
-            return ack
 
         # Caso contrário não fazemos nada
 
     # Definição do método que remove uma mensagem e seus acks das listas
     def remove_msg(self, ack):
 
-        print 'subiu para aplicação a mensagem:', '"',self.vetor_msg[0].msg,'"'
-        del self.vetor_msg[0]
-        self.vetor_ack.remove(ack)
-        # break
+        # Primeiramente andamos a lista procurando se a mensagem com o respectivo id está no vetor de mensagens
+        for i in range(len(self.vetor_ack)):
+
+            # Se estiver, removemos ambos, caso contrário não fazemos nada
+            if self.vetor_msg[i].id == ack.id:
+                print 'subiu para aplicação a mensagem:', '"',self.vetor_msg[i].msg,'"'
+                del self.vetor_msg[i]
+                self.vetor_ack.remove(ack)
+                break
 
 
     # Definição do método para criar uma mensagem
     def cria_msg(self, msg):
-        clock_msg = self.clock_processo                 # Criando o clock da mensagem
+        clock_msg = str(self.clock_processo) + self.id      # Criando o clock da mensagem
         mensagem = Mensagem(clock_msg, msg, self.id)
         self.recebe_msg(mensagem)                           # A mensagem criada já é adicionada no vetor de mensagens
         # ack = Ack(self.id)                                  # E seu respectivo ack também é criado
@@ -153,10 +148,11 @@ class Processo:
 
 # Definindo uma mensagem
 class Mensagem:
-    def __init__(self, clock_msg, msg, id):
+    def __init__(self, clock_msg, msg, id, ack):
         self.clock_msg = clock_msg
         self.id = id
         self.msg = msg
+        self.eh_ack = ack
 
     def get_clock(self):
         return self.clock_msg
@@ -212,22 +208,12 @@ def thread_recebe():
 
         # conn.close()
 
-# Definindo a thread que gera as mensagens
 def thread_gera():
     global processo
 
     while True:
         mensagem = processo.cria_msg(choice(string.letters))
         processo.envia_msg()
-
-        time.sleep(10)
-
-# Definindo a thread do clock
-def thread_clock():
-    global processo
-
-    while True:
-        processo.incrementa_clock()
 
         time.sleep(2)
 
@@ -244,7 +230,6 @@ def main():
     thread.start_new_thread(thread_recebe, ())
         # thread_recebe_dados.start()
     thread.start_new_thread(thread_gera, ())
-    thread.start_new_thread(thread_clock, ())
 
     signal.pause()
 
