@@ -11,6 +11,7 @@ import signal
 import time
 import struct
 import operator
+import os
 
 # Definindo um processo
 class Processo:
@@ -41,10 +42,7 @@ class Processo:
                 self.vetor_ack[i].n_acks += 1       # Contamos que recebemos mais um ack
 
             # Se tiver 3 acks e a mensagem, sobe o ack para a aplicação
-            self.verifica_subir()
-
-
-                # self.vetor_ack = sorted(self.vetor_ack, key = Ack.get_id) ################ Testando ordenação de objetos
+            # self.verifica_subir()
 
         # Se não encontramos o ack
         if not flag:
@@ -53,16 +51,16 @@ class Processo:
             ack.n_acks += 1
             self.vetor_ack.insert(len(self.vetor_ack), ack)
 
-        print '\n\nid\tacks\tpos'
-        for index in range(len(self.vetor_ack)):
-            print self.vetor_ack[index].id,'\t',self.vetor_ack[index].n_acks,'\t',index
+        # print '\n\nid\tacks\tpos'
+        # for index in range(len(self.vetor_ack)):
+        #     print self.vetor_ack[index].id,'\t',self.vetor_ack[index].n_acks,'\t',index
 
-
-                    #subir(self.vetor_ack[i])
-
+    # Definição do método que verifica se pode subir a mensagem
     def verifica_subir(self):
 
         for i in range(len(self.vetor_ack)):
+
+            # Se tiver 3 acks e existir a mensagem, a remove
             if int(self.vetor_msg[0].id) == int(self.vetor_ack[i].id) & self.vetor_ack[i].n_acks == 3:
                 self.remove_msg(self.vetor_ack[i])
 
@@ -78,13 +76,14 @@ class Processo:
 
             # Inserimos ela no vetor de mensagens e ordenamos o vetor
             self.vetor_msg.insert(len(self.vetor_msg), msg)
-            # print 'tipo do vetor'
-            # print self.vetor_msg
-            self.vetor_msg = sorted(self.vetor_msg, key = lambda mensagem: (Mensagem.get_clock, Mensagem.get_id))
 
-            print '\n\nclock\tid\tpos\tconteudo'
-            for index in range(len(self.vetor_msg)):
-                print self.vetor_msg[index].clock_msg,'\t',self.vetor_msg[index].id,'\t',index,'\t',self.vetor_msg[index].msg
+            # Ordenamos o vetor pelo id da mensagem, depois pelo clock
+            self.vetor_msg = sorted(self.vetor_msg, key = Mensagem.get_id)
+            self.vetor_msg = sorted(self.vetor_msg, key = Mensagem.get_clock)
+
+            # print '\n\nclock\tid\tpos\tconteudo'
+            # for index in range(len(self.vetor_msg)):
+            #     print self.vetor_msg[index].clock_msg,'\t',self.vetor_msg[index].id,'\t',index,'\t',self.vetor_msg[index].msg
 
             ack = Ack(msg.id)
             self.verifica_subir()
@@ -110,11 +109,6 @@ class Processo:
         # self.recebe_ack(ack)
 
         return mensagem
-        # print 'Clock_msg:', self.vetor_msg[0].clock_msg
-        # print 'Id_mensagem:', self.vetor_msg[0].id
-        # print 'Mensagem:', self.vetor_msg[0].msg,'\n'
-        # print 'Id do ack:', self.vetor_ack[0].id
-        # print 'Qtd de acks:', self.vetor_ack[0].n_acks,'\n'
 
     # Definição do método que envia uma mensagem
     def envia_msg(self):
@@ -124,37 +118,39 @@ class Processo:
 
         mensagem = self.cria_msg(choice(string.letters))
 
-        infoaddr = socket.getaddrinfo(GRUPO, None)[0]
+        print 'Enviando a mensagem:', mensagem.msg
 
-    	meu_socket = socket.socket(infoaddr[0], socket.SOCK_DGRAM)
-    	ttl = struct.pack('@i', TTL)
+        # Enviando a mensagem para todas as portas
+        for i in range(0,3):
 
-        meu_socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
+            # Menos para si mesmo
+            if int(sys.argv[1]) != 25000 + i:
 
-        # Enviando a mensagem e o ack para os outros processos
-        # print 'Enviando a mensagem'
-        mensagem_codificada = pickle.dumps(mensagem)
-        meu_socket.sendto(mensagem_codificada, (infoaddr[4][0], PORT))
-        meu_socket.close()
+                # Abrindo o socket
+                meu_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                server_address = ('localhost', 25000 + i)
+                meu_socket.connect(server_address)
+
+                # Enviando a mensagem e o ack para os outros processos
+                mensagem_codificada = pickle.dumps(mensagem)
+                meu_socket.send(mensagem_codificada)
+                meu_socket.close()
 
     # Definição do método que envia um ack
     def envia_ack(self, ack):
 
-        global PORT
-        global GRUPO
+        # Enviando para todas as portas
+        for i in range(0,3):
 
-        infoaddr = socket.getaddrinfo(GRUPO, None)[0]
+            # Abrindo o socket
+            meu_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            server_address = ('localhost', 25000 + i)
+            meu_socket.connect(server_address)
 
-    	meu_socket = socket.socket(infoaddr[0], socket.SOCK_DGRAM)
-    	ttl = struct.pack('@i', TTL)
-
-        meu_socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
-
-        # Enviando o ack
-        # print 'Enviando o ack'
-        ack_codificado = pickle.dumps(ack)
-        meu_socket.sendto(ack_codificado, (infoaddr[4][0], PORT))
-        # meu_socket.close()
+            # Enviando o ack
+            ack_codificado = pickle.dumps(ack)
+            meu_socket.send(ack_codificado)
+            meu_socket.close()
 
     def mostra_processo(self):
         print 'clock_processo: ', self.clock_processo
@@ -183,13 +179,6 @@ class Ack:
     def get_id(self):
         return self.id
 
-# def compara_clocks():
-#     if msg1.clock_msg > msg2.clocm_msg:
-#         return msg.get_clock
-#     else:
-#         return msg.get_id
-
-
 # Definindo a thread que recebe dados
 def thread_recebe():
     global processo
@@ -197,40 +186,36 @@ def thread_recebe():
     global GRUPO
 
     while True:
-        infoaddr = socket.getaddrinfo(GRUPO, None)[0]
+        serverPort = int(sys.argv[1])
+        serverSocket = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+        print serverPort
 
-        meu_socket = socket.socket(infoaddr[0], socket.SOCK_DGRAM)
+        try:
+            serverSocket.bind(('',serverPort))
+            serverSocket.listen(1)
 
-        meu_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            while True:
+                connectionSocket, addr = serverSocket.accept()
 
-        meu_socket.bind(('0.0.0.0', PORT))
+                try:
+                    data = connectionSocket.recv(1024)
+                    decodificada = pickle.loads(data) # "pid ack cont"
 
-        grupo_b = socket.inet_pton(infoaddr[0], infoaddr[4][0])
+                    if isinstance(decodificada, (Mensagem)):
+                        ack = processo.recebe_msg(decodificada)
+                        processo.envia_ack(ack)
 
-        grupo_assoc = grupo_b + struct.pack('=I', socket.INADDR_ANY)
-        meu_socket.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, grupo_assoc)
+                    elif isinstance(decodificada, (Ack)):
+                        processo.recebe_ack(decodificada)
 
-        # Recebendo os dados dos outros processos e os decodifica
-        data, addr = meu_socket.recvfrom(1024)
-        decodificada = pickle.loads(data)
-
-        if isinstance(decodificada, (Mensagem)):
-            # print 'Recebendo mensagem da máquina', addr,'\n'
-            ack = processo.recebe_msg(decodificada)
-            processo.envia_ack(ack)
-            # print 'mensagem'
-            # print 'Clock_msg:', decodificada.clock_msg
-            # print 'Id_msg:', decodificada.id
-            # print 'Mensagem:', decodificada.msg
-
-        if isinstance(decodificada, (Ack)):
-            # print 'Recebendo ack da máquina', addr,'\n'
-            processo.recebe_ack(decodificada)
-            # print 'Ack'
-            # print 'ID_Ack:', decodificada.id
-            # print 'N_acks:', decodificada.n_acks
-
-        # conn.close()
+                except Exception as e:
+                    # print 'Erro ao enviar:', e
+                    exc_type, exc_obj, exc_tb = sys.exc_info()
+                    fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                    print(exc_type, fname, exc_tb.tb_lineno)
+        except Exception as e:
+            print 'Erro ao abrir o socket:', e
+            time.sleep(5)
 
 # Definindo a thread que gera as mensagens
 def thread_gera():
@@ -251,11 +236,19 @@ def thread_clock():
 
         time.sleep(2)
 
+def thread_subir():
+    global processo
+
+    while True:
+        processo.verifica_subir()
+
+        time.sleep(1)
+
 processo = Processo(randint(0,9), sys.argv[2])
-HOST = 'localhost'
-GRUPO = "224.0.27.1"
-TTL = 1
-PORT = 15214
+# HOST = 'localhost'
+# GRUPO = "224.0.27.1"
+# TTL = 1
+# PORT = [25000, 25001, 25002]
 
 
 # Main
@@ -265,54 +258,9 @@ def main():
         # thread_recebe_dados.start()
     thread.start_new_thread(thread_gera, ())
     thread.start_new_thread(thread_clock, ())
+    thread.start_new_thread(thread_subir, ())
 
     signal.pause()
 
 if __name__ == "__main__":
     sys.exit(main())
-
-    # thread_gera_msg.start()
-    # thread = Thread(target = minha.recebendo_dados(conn, addr))
-    # thread.start()
-    #thread.join()
-
-# processo = Processo(1, "23")
-# processo.envia_msg()
-# processo = Processo(1, "23")
-# # processo.mostra_processo()
-# processo.incrementa_clock()
-# # processo.mostra_processo()
-# processo.cria_msg("Teste")
-# #ack = Ack("23")
-# #processo.recebe_ack(ack)
-# # print processo.vetor_ack[0].id
-# # print processo.vetor_ack[0].n_acks
-# #processo.recebe_ack(ack)
-# # print processo.vetor_ack[0].id
-# # print processo.vetor_ack[0].n_acks
-# ack_novo = Ack("12")
-# processo.recebe_ack(ack_novo)
-# ack_novo_3 = Ack("91")
-# processo.recebe_ack(ack_novo_3)
-# ack_novo_4 = Ack("17")
-# processo.recebe_ack(ack_novo_4)
-# # print processo.vetor_ack[0].id
-# # print processo.vetor_ack[0].n_acks
-# print 'id\tacks\tpos'
-# for index in range(len(processo.vetor_ack)):
-#     print processo.vetor_ack[index].id,'\t',processo.vetor_ack[index].n_acks,'\t',index
-#
-# ack_novo_5 = Ack("23")
-# processo.recebe_ack(ack_novo_5)
-# ack_novo_6 = Ack("23")
-# processo.recebe_ack(ack_novo_6)
-#
-# print '\n\nid\tacks\tpos'
-# for index in range(len(processo.vetor_ack)):
-#     print processo.vetor_ack[index].id,'\t',processo.vetor_ack[index].n_acks,'\t',index
-#
-# print 'Testando rand'
-# print(randint(0,9))
-#
-# print '\n\nTestando rand letras'
-# print choice(string.letters)
