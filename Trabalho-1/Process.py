@@ -40,14 +40,16 @@ class Processo:
                 flag = True                         # Marcamos na flag que encontramos o ack
 
                 self.vetor_ack[i].n_acks += 1       # Contamos que recebemos mais um ack
+                print 'Ack recebido:', ack.id
 
             # Se tiver 3 acks e a mensagem, sobe o ack para a aplicação
-            # self.verifica_subir()
+            self.verifica_subir()
 
         # Se não encontramos o ack
         if not flag:
 
             # inserimos o novo ack no vetor de acks
+            print 'Ack recebido:', ack.id
             ack.n_acks += 1
             self.vetor_ack.insert(len(self.vetor_ack), ack)
 
@@ -58,10 +60,13 @@ class Processo:
     # Definição do método que verifica se pode subir a mensagem
     def verifica_subir(self):
 
+        # print 'id_msg\tid_ack\tn_acks'
         for i in range(len(self.vetor_ack)):
 
             # Se tiver 3 acks e existir a mensagem, a remove
-            if int(self.vetor_msg[0].id) == int(self.vetor_ack[i].id) & self.vetor_ack[i].n_acks == 3:
+            # print self.vetor_msg[0],'\t',self.vetor_ack[i],'\t',self.vetor_ack[i].n_acks
+            if (int(self.vetor_msg[0].id) == int(self.vetor_ack[i].id)) & (self.vetor_ack[i].n_acks == 3):
+                # print 'entrou no if'
                 self.remove_msg(self.vetor_ack[i])
 
     # Definição do método que recebe mensagem
@@ -80,6 +85,8 @@ class Processo:
             # Ordenamos o vetor pelo id da mensagem, depois pelo clock
             self.vetor_msg = sorted(self.vetor_msg, key = Mensagem.get_id)
             self.vetor_msg = sorted(self.vetor_msg, key = Mensagem.get_clock)
+
+            print 'Mensagem recebida:', msg.msg
 
             # print '\n\nclock\tid\tpos\tconteudo'
             # for index in range(len(self.vetor_msg)):
@@ -124,17 +131,17 @@ class Processo:
         for i in range(0,3):
 
             # Menos para si mesmo
-            if int(sys.argv[1]) != 25000 + i:
+            # if int(sys.argv[1]) != 25000 + i:
 
-                # Abrindo o socket
-                meu_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                server_address = ('localhost', 25000 + i)
-                meu_socket.connect(server_address)
+            # Abrindo o socket
+            meu_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            server_address = ('localhost', 25000 + i)
+            meu_socket.connect(server_address)
 
-                # Enviando a mensagem e o ack para os outros processos
-                mensagem_codificada = pickle.dumps(mensagem)
-                meu_socket.send(mensagem_codificada)
-                meu_socket.close()
+            # Enviando a mensagem e o ack para os outros processos
+            mensagem_codificada = pickle.dumps(mensagem)
+            meu_socket.send(mensagem_codificada)
+            meu_socket.close()
 
     # Definição do método que envia um ack
     def envia_ack(self, ack):
@@ -258,7 +265,7 @@ def main():
         # thread_recebe_dados.start()
     thread.start_new_thread(thread_gera, ())
     thread.start_new_thread(thread_clock, ())
-    thread.start_new_thread(thread_subir, ())
+    # thread.start_new_thread(thread_subir, ())
 
     signal.pause()
 
