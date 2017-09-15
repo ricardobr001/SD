@@ -4,6 +4,13 @@
 # Com os IDs sendo 0, 1 e 2 respectivamente
 # Executar o programa passando no argumento a porta e o seu ID
 # Ex: python Process.py 25000 1
+# Ou iniciar o start.py (Necessário sistema linux)
+
+
+########################################################
+# Nome: Leonardo Zaccarias              RA: 620491     #
+# Nome: Ricardo Mendes Leal Junior      RA: 562262     #
+########################################################
 
 
 from random import *
