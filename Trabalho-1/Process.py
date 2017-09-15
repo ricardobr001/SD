@@ -1,5 +1,10 @@
 #coding: utf-8
-#python 2.7
+# python 2.7
+# Desenvolvido apenas para 3 processos, rodando nas portas 25000, 25001 e 25002
+# Com os IDs sendo 0, 1 e 2 respectivamente
+# Executar o programa passando no argumento a porta e o seu ID
+# Ex: python Process.py 25000 1
+
 
 from random import *
 import socket
@@ -9,17 +14,16 @@ import pickle
 import sys
 import signal
 import time
-import struct
-import operator
-import os
+# import os
 
 # Definindo um processo
 class Processo:
+
     # Um processo tem um clock do processo, um id, um incremento de clock do processo
     # um vetor de acks e um vetor com as mensagens
     def __init__(self, incremento_clock, id):
         self.clock_processo = incremento_clock
-        self.id = id # os.getpid()
+        self.id = id
         self.incremento_clock = incremento_clock
         self.vetor_ack = []
         self.vetor_msg = []
@@ -64,9 +68,7 @@ class Processo:
         for i in range(len(self.vetor_ack)):
 
             # Se tiver 3 acks e existir a mensagem, a remove
-            # print self.vetor_msg[0],'\t',self.vetor_ack[i],'\t',self.vetor_ack[i].n_acks
             if (int(self.vetor_msg[0].id) == int(self.vetor_ack[i].id)) & (self.vetor_ack[i].n_acks == 3):
-                # print 'entrou no if'
                 self.remove_msg(self.vetor_ack[i])
 
     # Definição do método que recebe mensagem
@@ -111,27 +113,19 @@ class Processo:
     def cria_msg(self, msg):
         clock_msg = self.clock_processo                 # Criando o clock da mensagem
         mensagem = Mensagem(clock_msg, msg, str(self.clock_processo) + str(self.id))
-        # self.recebe_msg(mensagem)                           # A mensagem criada já é adicionada no vetor de mensagens
-        # ack = Ack(self.id)                                  # E seu respectivo ack também é criado
-        # self.recebe_ack(ack)
 
         return mensagem
 
     # Definição do método que envia uma mensagem
     def envia_msg(self):
 
-        global PORT
-        global GRUPO
-
+        # Gera uma mensagem aleatória
         mensagem = self.cria_msg(choice(string.letters))
 
         print 'Enviando a mensagem:', mensagem.msg
 
         # Enviando a mensagem para todas as portas
         for i in range(0,3):
-
-            # Menos para si mesmo
-            # if int(sys.argv[1]) != 25000 + i:
 
             # Abrindo o socket
             meu_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -159,11 +153,6 @@ class Processo:
             meu_socket.send(ack_codificado)
             meu_socket.close()
 
-    def mostra_processo(self):
-        print 'clock_processo: ', self.clock_processo
-        print 'id: ', self.id
-        print 'incremento do clock: ', self.incremento_clock, "\n"
-
 # Definindo uma mensagem
 class Mensagem:
     def __init__(self, clock_msg, msg, id):
@@ -188,25 +177,29 @@ class Ack:
 
 # Definindo a thread que recebe dados
 def thread_recebe():
-    global processo
-    global PORT
-    global GRUPO
 
     while True:
         serverPort = int(sys.argv[1])
+
+        # Criando o socket
         serverSocket = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-        print serverPort
 
         try:
+
+            # O socket fica ouvindo o meio
             serverSocket.bind(('',serverPort))
             serverSocket.listen(1)
 
             while True:
+
+                # Aceita uma conexão
                 connectionSocket, addr = serverSocket.accept()
 
                 try:
+
+                    # Recebe os dados e os decodifica
                     data = connectionSocket.recv(1024)
-                    decodificada = pickle.loads(data) # "pid ack cont"
+                    decodificada = pickle.loads(data)
 
                     if isinstance(decodificada, (Mensagem)):
                         ack = processo.recebe_msg(decodificada)
@@ -216,10 +209,13 @@ def thread_recebe():
                         processo.recebe_ack(decodificada)
 
                 except Exception as e:
-                    # print 'Erro ao enviar:', e
-                    exc_type, exc_obj, exc_tb = sys.exc_info()
-                    fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-                    print(exc_type, fname, exc_tb.tb_lineno)
+                    print 'Erro ao receber:', e
+                    # exc_type, exc_obj, exc_tb = sys.exc_info()
+                    # fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                    # print(exc_type, fname, exc_tb.tb_lineno)
+
+
+
         except Exception as e:
             print 'Erro ao abrir o socket:', e
             time.sleep(5)
@@ -231,8 +227,13 @@ def thread_gera():
     while True:
         time.sleep(10)
 
-        mensagem = processo.cria_msg(choice(string.letters))
-        processo.envia_msg()
+        try:
+            processo.envia_msg()
+        except Exception as e:
+        	print 'Erro ao enviar', e
+            # exc_type, exc_obj, exc_tb = sys.exc_info()
+            # fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            # print(exc_type, fname, exc_tb.tb_lineno)
 
 # Definindo a thread do clock
 def thread_clock():
@@ -243,29 +244,14 @@ def thread_clock():
 
         time.sleep(2)
 
-def thread_subir():
-    global processo
-
-    while True:
-        processo.verifica_subir()
-
-        time.sleep(1)
-
 processo = Processo(randint(0,9), sys.argv[2])
-# HOST = 'localhost'
-# GRUPO = "224.0.27.1"
-# TTL = 1
-# PORT = [25000, 25001, 25002]
-
 
 # Main
 def main():
     PORT = sys.argv[1]
     thread.start_new_thread(thread_recebe, ())
-        # thread_recebe_dados.start()
     thread.start_new_thread(thread_gera, ())
     thread.start_new_thread(thread_clock, ())
-    # thread.start_new_thread(thread_subir, ())
 
     signal.pause()
 
