@@ -21,7 +21,7 @@ import pickle
 import sys
 import signal
 import time
-# import os
+import os
 
 # Definindo um processo
 class Processo:
@@ -81,11 +81,12 @@ class Processo:
     # Definição do método que recebe mensagem
     def recebe_msg(self, msg):
 
+        print 'Arrumar o recebe_msg'
         # Se está mensagem não estiver no vetor, significa que o recurso não está sendo solicitado
         if not self.verifica_solicitacao(msg):
 
             # Envia um ok ao remetente
-            self.envia_ok(msg.id)
+            self.envia_ok(msg.id, msg.nome_recurso)
 
         # Caso contrário, o recurso está sendo utilizado, se estiver na região crítica
         elif self.regiao_critica(msg):
@@ -117,6 +118,21 @@ class Processo:
             # self.verifica_subir()
             # return ack
 
+    # Definição do método que recebe um ok
+    def recebe_ok(self, msg):
+
+        # Se o recurso ainda estiver no vetor
+        if self.verifica_solicitacao(msg):
+
+            # Liberamos o uso do recurso para esse processo
+            self.verifica_subir()
+
+        # Caso contrário, TTL exceed
+        else:
+
+            print 'Limite de tempo excedido:', msg.recurso
+
+
     # Definição do método que remove uma mensagem e seus acks das listas
     def remove_msg(self, ack):
 
@@ -129,7 +145,7 @@ class Processo:
     # Definição do método para criar uma mensagem
     def cria_msg(self, msg):
         clock_msg = self.clock_processo                 # Criando o clock da mensagem
-        mensagem = Mensagem(clock_msg, msg, str(self.clock_processo) + str(self.id))
+        mensagem = Mensagem(clock_msg, msg, str(self.clock_processo) + str(self.id), False)
 
         return mensagem
 
@@ -148,9 +164,10 @@ class Processo:
                 return self.vetor_msg[i].regiao_critica
 
     # Definição do método que envia ok ao remetente
-    def envia_ok(self, id):
+    def envia_ok(self, id, recurso):
 
         print 'Enviando ok ao:', id
+        print 'Ok do recurso:', recurso
 
         # Abrindo o socket
         meu_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -158,7 +175,7 @@ class Processo:
         meu_socket.connect(server_address)
 
         # Enviando o ok para o remetente
-        ok = Ok(True)
+        ok = Ok(True, recurso)
         ok_codificado = pickle.dumps(ok)
         meu_socket.send(ok_codificado)
         meu_socket.close()
@@ -167,9 +184,9 @@ class Processo:
     def envia_msg(self):
 
         # Gera uma mensagem aleatória
-        mensagem = self.cria_msg(choice(string.letters))
+        mensagem = self.cria_msg(str(randint(0,9)))
 
-        print 'Enviando a mensagem:', mensagem.msg
+        print 'Enviando solicitação do recurso:', mensagem.nome_recurso
 
         # Enviando a mensagem para todas as portas
         for i in range(0,3):
@@ -179,7 +196,7 @@ class Processo:
             server_address = ('localhost', 25000 + i)
             meu_socket.connect(server_address)
 
-            # Enviando a mensagem e o ack para os outros processos
+            # Enviando a mensagem
             mensagem_codificada = pickle.dumps(mensagem)
             meu_socket.send(mensagem_codificada)
             meu_socket.close()
@@ -225,8 +242,9 @@ class Ack:
 
 # Definindo um ok
 class Ok:
-    def __init__(self, valor):
+    def __init__(self, valor, recurso):
         self.valor = valor
+        self.recurso = recurso
 
 # Definindo a thread que recebe dados
 def thread_recebe():
@@ -261,6 +279,9 @@ def thread_recebe():
                     elif isinstance(decodificada, (Ack)):
                         processo.recebe_ack(decodificada)
 
+                    elif isinstance(decodificada, (Ok)):
+                        processo.recebe_ok(decodificada)
+
                 except Exception as e:
                     print 'Erro ao receber:', e
                     # exc_type, exc_obj, exc_tb = sys.exc_info()
@@ -283,10 +304,10 @@ def thread_gera():
         try:
             processo.envia_msg()
         except Exception as e:
-        	print 'Erro ao enviar', e
-            # exc_type, exc_obj, exc_tb = sys.exc_info()
-            # fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-            # print(exc_type, fname, exc_tb.tb_lineno)
+        	# print 'Erro ao enviar', e
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
 
 # Definindo a thread do clock
 def thread_clock():
