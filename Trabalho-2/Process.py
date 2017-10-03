@@ -81,12 +81,12 @@ class Processo:
     # Definição do método que recebe mensagem
     def recebe_msg(self, msg):
 
-        print 'Arrumar o recebe_msg'
+        # print 'Arrumar o recebe_msg'
         # Se está mensagem não estiver no vetor, significa que o recurso não está sendo solicitado
         if not self.verifica_solicitacao(msg):
 
             # Envia um ok ao remetente
-            self.envia_ok(msg.id, msg.nome_recurso)
+            self.envia_ok(msg.id_processo, msg.nome_recurso)
 
         # Caso contrário, o recurso está sendo utilizado, se estiver na região crítica
         elif self.regiao_critica(msg):
@@ -145,46 +145,60 @@ class Processo:
     # Definição do método para criar uma mensagem
     def cria_msg(self, msg):
         clock_msg = self.clock_processo                 # Criando o clock da mensagem
-        mensagem = Mensagem(clock_msg, msg, str(self.clock_processo) + str(self.id), False)
+        mensagem = Mensagem(clock_msg, msg, str(self.clock_processo) + str(self.id), False, self.id)
 
         return mensagem
 
     # Definição de um método que verifica se um recurso está sendo solicitado
     def verifica_solicitacao(self, msg):
+        # print 'Verificando se um recurso', msg.nome_recurso,'está sendo solicitado'
+        # print type(msg.nome_recurso)
+        # print 'tipo do vetor:'
+        # print type(self.vetor_msg[0].nome_recurso)
+        # Se o vetor estiver vazio
+        if not self.vetor_msg:
+            # print 'Vetor mensagem vazio!!'
+            return False
+
         for i in range(len(self.vetor_msg)):
-            if (msg.id == self.vetor_msg[i].id):
+            if (msg.nome_recurso == self.vetor_msg[i].nome_recurso):
                 return True     # Se encontrou retorna True, se não False
 
         return False
 
     # Definição do método que verifica se um recurso está na região crítica
     def regiao_critica(self, msg):
+        # print 'Verificando se um recurso', msg.nome_recurso,'está na região critica'
         for i in range(len(self.vetor_msg)):
-            if (msg.id == self.vetor_msg[i].id):
+            if (msg.nome_recurso == self.vetor_msg[i].nome_recurso):
                 return self.vetor_msg[i].regiao_critica
 
     # Definição do método que envia ok ao remetente
     def envia_ok(self, id, recurso):
 
-        print 'Enviando ok ao:', id
-        print 'Ok do recurso:', recurso
+        print 'Enviando ok ao processo:', id,'\tRecurso:', recurso
+        # print 'Ok do recurso:', recurso
+        # print type(id)
 
         # Abrindo o socket
         meu_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_address = ('localhost', 25000 + id)
         meu_socket.connect(server_address)
 
+        # print 'socket criado e conectado'
+
         # Enviando o ok para o remetente
         ok = Ok(True, recurso)
         ok_codificado = pickle.dumps(ok)
         meu_socket.send(ok_codificado)
         meu_socket.close()
+        # print 'OK enviado'
 
     # Definição do método que envia uma mensagem
     def envia_msg(self):
 
         # Gera uma mensagem aleatória
-        mensagem = self.cria_msg(str(randint(0,9)))
+        mensagem = self.cria_msg(randint(0,9))
 
         print 'Enviando solicitação do recurso:', mensagem.nome_recurso
 
@@ -219,9 +233,10 @@ class Processo:
 
 # Definindo uma mensagem
 class Mensagem:
-    def __init__(self, clock_msg, nome_recurso, id, regiao_critica):
+    def __init__(self, clock_msg, nome_recurso, id, regiao_critica, id_processo):
         self.clock_msg = clock_msg
         self.id = id
+        self.id_processo = id_processo
         self.nome_recurso = nome_recurso
         self.regiao_critica = regiao_critica
 
@@ -318,7 +333,7 @@ def thread_clock():
 
         time.sleep(2)
 
-processo = Processo(randint(0,9), sys.argv[2])
+processo = Processo(randint(0,9), int(sys.argv[2]))
 
 # Main
 def main():
