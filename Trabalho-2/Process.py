@@ -85,7 +85,7 @@ class Processo:
     def recebe_ok(self, msg):
 
         # Se a mensagem, for um ok de permissão
-        if msg.recurso:
+        if msg.resposta:
 
             self.ok += 1
 
@@ -186,8 +186,8 @@ class Mensagem:
 
 # Definindo um ok
 class Ok:
-    def __init__(self, recurso, id):
-        self.recurso = recurso
+    def __init__(self, resposta, id):
+        self.resposta = resposta
         self.id = id
 
 # Definindo a thread que recebe dados
