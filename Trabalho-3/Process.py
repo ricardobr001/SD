@@ -30,116 +30,52 @@ class Processo:
     # um vetor de acks e um vetor com as mensagens
     def __init__(self, incremento_clock, id):
         self.clock_processo = incremento_clock
+        self.clock_eleicao = incremento_clock
         self.id = id
         self.incremento_clock = incremento_clock
-        self.ok = 0
+        self.valentao = False
+        self.ativo = True
+        self.eleicao = False
         self.vetor_msg = []
-        self.usando_recurso = False
-        self.requisitando_recurso = False
+        self.vetor_resposta = []
+        self.coordenador_atual = 5
 
     def incrementa_clock(self):
         self.clock_processo += self.incremento_clock
 
+        if not self.eleicao:
+            self.clock
+
     # Definição do método que recebe mensagem
     def recebe_msg(self, msg):
 
-        # Se o processo não estiver usando o recurso, e nem pretende utilizá-lo
-        if not (self.usando_recurso | self.requisitando_recurso):
+        #verifica se é uma mensagem de coordenador eleito
+        if msg.coordenador:
+            self.coordenador_atual = msg.id_processo
 
-            # Envia um ok ao remetente
-            self.envia_ok(msg.id_processo, True)
-
-        # Caso contrário, o recurso está sendo utilizado, se estiver na região crítica
-        elif self.usando_recurso:
-
-            # Inserimos ela na fila de mensagens
-            self.vetor_msg.insert(len(self.vetor_msg), msg)
-
-            # Ordenamos o vetor pelo id da mensagem, depois pelo clock
-            self.vetor_msg = sorted(self.vetor_msg, key = Mensagem.get_id)
-            self.vetor_msg = sorted(self.vetor_msg, key = Mensagem.get_clock)
-
-            # Respondemos ao remetente que ele deve esperar
-            self.envia_ok(msg.id_processo, False)
-
-        # Caso contrário, o recurso pode ser usado futuramente pelo receptor
-        elif self.requisitando_recurso:
-
-            # Se a requisição for do proprio processo, o vetor estará vazio, portanto ele insere a propria requisição
-            if not self.vetor_msg:
-                self.vetor_msg.insert(len(self.vetor_msg), msg)
-
-            elif msg.clock_msg < self.vetor_msg[0].clock_msg:
-                self.envia_ok(msg.id_processo, True)
+        #se for requisição de eleição
+        else:
+            # verifica qual o id maior, se o recebido for maior, envia ok
+            if msg.id_processo > self.id:
+                self.envia_ok(msg.id_processo)
+            # se o processo atual é maior, convoca eleição
             else:
-                self.envia_ok(msg.id_processo, False)
-
-                # Inserimos a requisição no vetor
-                self.vetor_msg.insert(len(self.vetor_msg), msg)
-
-                # Ordenamos o vetor pelo id da mensagem, depois pelo clock
-                self.vetor_msg = sorted(self.vetor_msg, key = Mensagem.get_id)
-                self.vetor_msg = sorted(self.vetor_msg, key = Mensagem.get_clock)
+                self.convoca_eleicao()
 
     # Definição do método que recebe um ok
     def recebe_ok(self, msg):
-
-        # Se a mensagem, for um ok de permissão
-        if msg.recurso:
-
-            self.ok += 1
-
-            # Se atingir 3 oks, usa o recurso e remove a requisição da lista e ostenta ok
-            if self.ok == 3:
-                self.usa_recurso()
-                self.remove_msg()
-
-
-    # Definição do método que requisita o recurso
-    def requisita_recurso(self):
-
-        self.requisitando_recurso = True
-        self.ok = 1
-        self.envia_msg()
-
-    # Definição do método que remove uma mensagem e seus acks das listas
-    def remove_msg(self):
-
-        # Removendo a minha requisição, que é a primeira
-        del self.vetor_msg[0]
-        self.ok = 0
-
-        # Enviando ok para todas as requisições no vetor e limpando o vetor
-        while len(self.vetor_msg) != 0:
-            self.envia_ok(self.vetor_msg[0].id_processo, True)
-            del self.vetor_msg[0]
-
-
-    # Definição do método que simula o uso de um recurso
-    def usa_recurso(self):
-        print 'Processo', self.id, 'usando o recurso'
-        self.usando_recurso = True
-
-        time.sleep(5)
-
-        print 'Processo', self.id, 'terminou de usar o recurso'
-        self.usando_recurso = False
-        self.requisitando_recurso = False
+        if msg.flag == 'E':
+            print 'Sou um bosta mermao'
+        else:
+            processo.coordenador_atual = msg.id
 
     # Definição do método para criar uma mensagem
-    def cria_msg(self):
-        clock_msg = self.clock_processo                 # Criando o clock da mensagem
-        mensagem = Mensagem(clock_msg, str(self.clock_processo) + str(self.id), self.id)
-
+    def cria_msg(self, flag):
+        mensagem = Mensagem(self.id, flag)
         return mensagem
 
     # Definição do método que envia ok ao remetente
-    def envia_ok(self, id, recurso):
-
-        if not recurso:
-            print 'Permissão negada ao processo', id
-        else:
-            print 'Enviando ok ao processo:', id
+    def envia_ok(self, id):
 
         # Abrindo o socket
         meu_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -147,20 +83,25 @@ class Processo:
         meu_socket.connect(server_address)
 
         # Enviando o ok para o remetente
-        ok = Ok(recurso, id)
+        ok = Ok(id)
         ok_codificado = pickle.dumps(ok)
         meu_socket.send(ok_codificado)
         meu_socket.close()
 
     # Definição do método que envia uma mensagem
-    def envia_msg(self):
+    def envia_msg(self, mensagem):
 
-        # Gera uma mensagem aleatória
-        mensagem = self.cria_msg()
+        #se for uma mensagem de coordenador envia para todos os processos
+        if mensagem.flag == 'C':
+            i = 0
+        #se for eleicao envia apenas para os maiores
+        elif mensagem.flag == 'E':
+            i = self.id+1
+        else:
+            i = mensagem.flag
 
-        # Enviando a mensagem para todas as portas
-        for i in range(0,3):
-
+        # Enviando a mensagem para processos
+        while i < 5:
             # Abrindo o socket
             meu_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             server_address = ('localhost', 25000 + i)
@@ -171,24 +112,39 @@ class Processo:
             meu_socket.send(mensagem_codificada)
             meu_socket.close()
 
+            i += 1
+
+
+    def convoca_eleicao(self):
+        # cria uma mensagem do tipo eleicao
+        mensagem = self.cria_msg(self.id, 'E')
+
+        #envia mensagem de eleicao
+        self.envia_msg(mensagem)
+
+        #Timeout de resposta
+
+
+        #Se der timeout, envia mensagem de coordenador
+        mensagem.set_coordenador()
+        self.envia_msg(mensagem)
+
 # Definindo uma mensagem
 class Mensagem:
-    def __init__(self, clock_msg, id, id_processo):
-        self.clock_msg = clock_msg
-        self.id = id
+    def __init__(self, id_processo, flag):
         self.id_processo = id_processo
+        self.flag = flag    # E = mensagem de eleição, C = mensagem de definição de coordenador
+                            # T = e a mensagem de teste para ver se o coordenador vive
 
-    def get_clock(self):
-        return self.clock_msg
-
-    def get_id(self):
-        return self.id
+    def set_coordenador(self):
+        self.flag = 'C'
 
 # Definindo um ok
 class Ok:
-    def __init__(self, recurso, id):
-        self.recurso = recurso
+    def __init__(self, id, flag):
         self.id = id
+        self.flag = flag # E = Ok pra eleição T = ack da msg enviado ao coordenador
+
 
 # Definindo a thread que recebe dados
 def thread_recebe():
@@ -207,6 +163,10 @@ def thread_recebe():
             serverSocket.listen(1)
 
             while True:
+
+                # Se o processo estiver marcado como inativo, dorme
+                if not processo.ativo:
+                    time.sleep(50000)
 
                 # Aceita uma conexão
                 connectionSocket, addr = serverSocket.accept()
@@ -237,20 +197,29 @@ def thread_recebe():
 def thread_gera():
     global processo
 
+    time.sleep(processo.id * 2)
+
     while True:
-
-        # O processo ira requisitar o recurso em tempos aleatórios
-        time.sleep(randint(1,10))
-
         try:
-            if not (processo.requisitando_recurso | processo.usando_recurso):
-                processo.requisita_recurso()
+            # If para o coordenador nao mandar msg pra ele msm
+            if processo.coordenador_atual != processo.id & processo.ativo:
+                # Envia msg pro coordenador
+                mensagem = processo.cria_msg(processo.id, 'T')
+                processo.coordenador_atual = -1
+                processo.envia_msg(mensagem)
+                # espera 1 segundo de time out para ver se recebe ok do coordenador
+                time.sleep(1)
+                if processo.coordenador_atual == -1:
+                    processo.convoca_eleicao()
 
         except Exception as e:
         	print 'Erro ao enviar', e
             # exc_type, exc_obj, exc_tb = sys.exc_info()
             # fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             # print(exc_type, fname, exc_tb.tb_lineno)
+
+        # O processo ira requisitar o recurso em tempos aleatórios
+        time.sleep(9)
 
 # Definindo a thread do clock
 def thread_clock():
@@ -260,6 +229,24 @@ def thread_clock():
         processo.incrementa_clock()
 
         time.sleep(2)
+
+# Definindo a thread que detecta Timeout
+def thread_timeout():
+    global processo
+
+    while True:
+        if processo.clock_processo - processo.clock_eleicao > 20:
+            print 'timeout!!!'
+
+# Definindo a thread que interage com o usuário
+def thread_input():
+    global processo
+
+    while True:
+        entrada = raw_input()
+
+        if entrada == 'kill':
+            processo.ativo = False
 
 processo = Processo(randint(0,9), int(sys.argv[2]))
 print 'Processo:', sys.argv[2]
