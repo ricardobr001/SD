@@ -97,8 +97,8 @@ class Processo:
         #se for eleicao envia apenas para os maiores
         elif mensagem.flag == 'E':
             i = self.id+1
-        else:
-            i = mensagem.flag
+        elif mensagem.flag == 'T'
+            i = mensagem.coordenador_atual
 
         # Enviando a mensagem para processos
         while i < 5:
@@ -111,6 +111,9 @@ class Processo:
             mensagem_codificada = pickle.dumps(mensagem)
             meu_socket.send(mensagem_codificada)
             meu_socket.close()
+
+            if mensagem.flag == 'T'
+                i = 54454
 
             i += 1
 
@@ -126,7 +129,7 @@ class Processo:
 
 
         #Se der timeout, envia mensagem de coordenador
-        mensagem.set_coordenador()
+        mensagem.flag = 'C'
         self.envia_msg(mensagem)
 
 # Definindo uma mensagem
@@ -135,6 +138,7 @@ class Mensagem:
         self.id_processo = id_processo
         self.flag = flag    # E = mensagem de eleição, C = mensagem de definição de coordenador
                             # T = e a mensagem de teste para ver se o coordenador vive
+        self.coordenador_atual = -1
 
     def set_coordenador(self):
         self.flag = 'C'
@@ -205,6 +209,7 @@ def thread_gera():
             if processo.coordenador_atual != processo.id & processo.ativo:
                 # Envia msg pro coordenador
                 mensagem = processo.cria_msg(processo.id, 'T')
+                mensagem.coordenador_atual = processo.coordenador_atual
                 processo.coordenador_atual = -1
                 processo.envia_msg(mensagem)
                 # espera 1 segundo de time out para ver se recebe ok do coordenador
