@@ -43,6 +43,10 @@ class Processo:
     # Definição do método que recebe mensagem
     def recebe_msg(self, msg):
 
+        # Verificando o clock da mensagem
+        if msg.clock_msg > self.clock_processo:
+            self.clock_processo = msg.clock_msg + 1
+
         # Se o processo não estiver usando o recurso, e nem pretende utilizá-lo
         if not (self.usando_recurso | self.requisitando_recurso):
 
@@ -98,6 +102,7 @@ class Processo:
     # Definição do método que requisita o recurso
     def requisita_recurso(self):
 
+        print 'Clock:',self.clock_processo,'\tProcesso', self.id, 'requisita o recurso'
         self.requisitando_recurso = True
         self.ok = 1
         self.envia_msg()
@@ -117,12 +122,12 @@ class Processo:
 
     # Definição do método que simula o uso de um recurso
     def usa_recurso(self):
-        print 'Processo', self.id, 'usando o recurso'
+        print 'Clock:',self.clock_processo,'\tProcesso', self.id, 'USANDO RECURSO'
         self.usando_recurso = True
 
         time.sleep(5)
 
-        print 'Processo', self.id, 'terminou de usar o recurso'
+        print 'Clock:',self.clock_processo,'\tProcesso', self.id, 'terminou de usar o recurso'
         self.usando_recurso = False
         self.requisitando_recurso = False
 
@@ -137,9 +142,9 @@ class Processo:
     def envia_ok(self, id, recurso):
 
         if not recurso:
-            print 'Permissão negada ao processo', id
+            print 'Clock:',self.clock_processo,'\tPermissão negada ao processo', id
         else:
-            print 'Enviando ok ao processo:', id
+            print 'Clock:',self.clock_processo,'\tEnviando ok ao processo:', id
 
         # Abrindo o socket
         meu_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
