@@ -21,7 +21,7 @@ import pickle
 import sys
 import signal
 import time
-import os
+# import os
 
 # Definindo um processo
 class Processo:
@@ -39,46 +39,6 @@ class Processo:
 
     def incrementa_clock(self):
         self.clock_processo += self.incremento_clock
-
-    # Definiçaõ do método que recebe um ack
-    def recebe_ack(self, ack):
-
-        # flag que marca se encontrou ou não determinado ack
-        flag = False
-
-        # Se o ack estiver na lista de acks
-        for i in range(len(self.vetor_ack)):
-            if ack.id == self.vetor_ack[i].id:
-
-                flag = True                         # Marcamos na flag que encontramos o ack
-
-                self.vetor_ack[i].n_acks += 1       # Contamos que recebemos mais um ack
-                print 'Ack recebido:', ack.id
-
-            # Se tiver 3 acks e a mensagem, sobe o ack para a aplicação
-            self.verifica_subir()
-
-        # Se não encontramos o ack
-        if not flag:
-
-            # inserimos o novo ack no vetor de acks
-            print 'Ack recebido:', ack.id
-            ack.n_acks += 1
-            self.vetor_ack.insert(len(self.vetor_ack), ack)
-
-        # print '\n\nid\tacks\tpos'
-        # for index in range(len(self.vetor_ack)):
-        #     print self.vetor_ack[index].id,'\t',self.vetor_ack[index].n_acks,'\t',index
-
-    # Definição do método que verifica se pode subir a mensagem
-    def verifica_subir(self):
-
-        # print 'id_msg\tid_ack\tn_acks'
-        for i in range(len(self.vetor_ack)):
-
-            # Se tiver 3 acks e existir a mensagem, a remove
-            if (int(self.vetor_msg[0].id) == int(self.vetor_ok[i].id)) & (self.vetor_ok[i].n_acks == 3):
-                self.remove_msg(self.vetor_ok[i])
 
     # Definição do método que recebe mensagem
     def recebe_msg(self, msg):
@@ -104,14 +64,15 @@ class Processo:
 
         # Caso contrário, o recurso pode ser usado futuramente pelo receptor
         elif self.requisitando_recurso:
+
             # Se a requisição for do proprio processo, o vetor estará vazio, portanto ele insere a propria requisição
             if not self.vetor_msg:
                 self.vetor_msg.insert(len(self.vetor_msg), msg)
 
             elif msg.clock_msg < self.vetor_msg[0].clock_msg:
-                self.envia_ok(msg.id, True)
+                self.envia_ok(msg.id_processo, True)
             else:
-                self.envia_ok(msg.id, False)
+                self.envia_ok(msg.id_processo, False)
 
                 # Inserimos a requisição no vetor
                 self.vetor_msg.insert(len(self.vetor_msg), msg)
@@ -119,37 +80,6 @@ class Processo:
                 # Ordenamos o vetor pelo id da mensagem, depois pelo clock
                 self.vetor_msg = sorted(self.vetor_msg, key = Mensagem.get_id)
                 self.vetor_msg = sorted(self.vetor_msg, key = Mensagem.get_clock)
-
-            # Verificando o clock da mensagem
-            # if msg.clock_msg > self.clock_processo:
-            #     self.clock_processo = msg.clock_msg + 1
-
-
-
-            # print 'Mensagem recebida:', msg.msg
-
-            # print '\n\nclock\tid\tpos\tconteudo'
-            # for index in range(len(self.vetor_msg)):
-            #     print self.vetor_msg[index].clock_msg,'\t',self.vetor_msg[index].id,'\t',index,'\t',self.vetor_msg[index].msg
-
-            # ack = Ack(msg.id)
-            # self.verifica_subir()
-            # return ack
-
-    # Definição do método que busca um id no vetor de mensagens
-    def busca_id_processo(self, id):
-
-        # Se o vetor tiver vazio, retorna -1
-        if not self.vetor_msg:
-            return -1
-
-        # Se encontrar o id, retorna sua posição
-        for i in range(len(self.vetor_msg)):
-            if (id == self.vetor_msg[i].id):
-                return i
-
-        # Se não encontrar o id, retorna -1
-        return -1
 
     # Definição do método que recebe um ok
     def recebe_ok(self, msg):
@@ -160,7 +90,7 @@ class Processo:
             self.ok += 1
 
             # Se atingir 3 oks, usa o recurso e remove a requisição da lista e ostenta ok
-            if (self.ok == 3)
+            if self.ok == 3:
                 self.usa_recurso()
                 self.remove_msg()
 
@@ -179,28 +109,22 @@ class Processo:
         del self.vetor_msg[0]
         self.ok = 0
 
-        # Aqui começa a ostentação
-        while (not vetor_msg):
+        # Enviando ok para todas as requisições no vetor e limpando o vetor
+        while len(self.vetor_msg) != 0:
             self.envia_ok(self.vetor_msg[0].id_processo, True)
-            del vetor_msg[0]
-
-            # Acabo a ostentação
-            # if (self.vetor_msg[i].id_processo == self.id):
-            #     break
+            del self.vetor_msg[0]
 
 
     # Definição do método que simula o uso de um recurso
     def usa_recurso(self):
         print 'Processo', self.id, 'usando o recurso'
         self.usando_recurso = True
-        self.requisitando_recurso = False
 
         time.sleep(5)
 
         print 'Processo', self.id, 'terminou de usar o recurso'
         self.usando_recurso = False
-
-
+        self.requisitando_recurso = False
 
     # Definição do método para criar uma mensagem
     def cria_msg(self):
@@ -216,30 +140,23 @@ class Processo:
             print 'Permissão negada ao processo', id
         else:
             print 'Enviando ok ao processo:', id
-        # print 'Ok do recurso:', recurso
-        # print type(id)
 
         # Abrindo o socket
         meu_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_address = ('localhost', 25000 + id)
         meu_socket.connect(server_address)
 
-        # print 'socket criado e conectado'
-
         # Enviando o ok para o remetente
-        ok = Ok(recurso)
+        ok = Ok(recurso, id)
         ok_codificado = pickle.dumps(ok)
         meu_socket.send(ok_codificado)
         meu_socket.close()
-        # print 'OK enviado'
 
     # Definição do método que envia uma mensagem
     def envia_msg(self):
 
         # Gera uma mensagem aleatória
         mensagem = self.cria_msg()
-
-        # print 'Enviando solicitação do recurso:', mensagem.nome_recurso
 
         # Enviando a mensagem para todas as portas
         for i in range(0,3):
@@ -275,6 +192,7 @@ class Ok:
 
 # Definindo a thread que recebe dados
 def thread_recebe():
+    global processo
 
     while True:
         serverPort = int(sys.argv[1])
@@ -311,8 +229,6 @@ def thread_recebe():
                     # fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
                     # print(exc_type, fname, exc_tb.tb_lineno)
 
-
-
         except Exception as e:
             print 'Erro ao abrir o socket:', e
             time.sleep(5)
@@ -322,6 +238,8 @@ def thread_gera():
     global processo
 
     while True:
+
+        # O processo ira requisitar o recurso em tempos aleatórios
         time.sleep(randint(1,10))
 
         try:
@@ -329,10 +247,10 @@ def thread_gera():
                 processo.requisita_recurso()
 
         except Exception as e:
-        	# print 'Erro ao enviar', e
-            exc_type, exc_obj, exc_tb = sys.exc_info()
-            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-            print(exc_type, fname, exc_tb.tb_lineno)
+        	print 'Erro ao enviar', e
+            # exc_type, exc_obj, exc_tb = sys.exc_info()
+            # fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            # print(exc_type, fname, exc_tb.tb_lineno)
 
 # Definindo a thread do clock
 def thread_clock():
@@ -344,6 +262,7 @@ def thread_clock():
         time.sleep(2)
 
 processo = Processo(randint(0,9), int(sys.argv[2]))
+print 'Processo:', sys.argv[2]
 
 # Main
 def main():
