@@ -30,52 +30,67 @@ class Processo:
     # um vetor de acks e um vetor com as mensagens
     def __init__(self, incremento_clock, id):
         self.clock_processo = incremento_clock
-        self.clock_eleicao = incremento_clock
         self.id = id
         self.incremento_clock = incremento_clock
-        self.valentao = False
         self.ativo = True
         self.eleicao = False
-        self.vetor_msg = []
-        self.vetor_resposta = []
-        self.coordenador_atual = 5
+        self.coordenador_atual = 4
 
     def incrementa_clock(self):
         self.clock_processo += self.incremento_clock
-
-        if not self.eleicao:
-            self.clock
 
     # Definição do método que recebe mensagem
     def recebe_msg(self, msg):
 
         #verifica se é uma mensagem de coordenador eleito
-        if msg.coordenador:
+        if msg.flag == 'C':
+            self.eleicao = False
+            print 'Acabou eleicao'
             self.coordenador_atual = msg.id_processo
 
-        #se for requisição de eleição
-        else:
-            # verifica qual o id maior, se o recebido for maior, envia ok
-            if msg.id_processo > self.id:
-                self.envia_ok(msg.id_processo)
-            # se o processo atual é maior, convoca eleição
-            else:
+        # Se for mensagem de teste, responde com ok, que o coordenador está vivo
+        elif msg.flag == 'T':
+            ok = self.cria_ok(self.id, msg.flag)
+            self.envia_ok(msg.id_processo, ok)
+
+        # Se for requisição de eleição
+        elif msg.flag == 'E':
+            self.eleicao = True
+            print 'Esta tendo eleicao'
+            # Verifica qual o id maior, se o recebido for maior, envia ok
+            if msg.id_processo < self.id:
+                ok = self.cria_ok(self.id, msg.flag)
+                self.envia_ok(msg.id_processo, ok)
                 self.convoca_eleicao()
 
     # Definição do método que recebe um ok
     def recebe_ok(self, msg):
+
+        # Se for um ok de eleição, eu perdi
         if msg.flag == 'E':
+            self.eleicao = False
             print 'Sou um bosta mermao'
+            self.coordenador_atual = -2
+
+        # Se for ok do coordenador, o coordenador está vivo
         else:
-            processo.coordenador_atual = msg.id
+            processo.coordenador_atual = msg.id_processo
+            print 'Coordenador ', processo.coordenador_atual, 'está operante'
 
     # Definição do método para criar uma mensagem
-    def cria_msg(self, flag):
-        mensagem = Mensagem(self.id, flag)
+    def cria_msg(self, id, flag):
+        mensagem = Mensagem(id, flag)
         return mensagem
 
+    # Definição do método que cria um ok
+    def cria_ok(self, id, flag):
+        ok = Ok(id, flag)
+        return ok
+
     # Definição do método que envia ok ao remetente
-    def envia_ok(self, id):
+    def envia_ok(self, id, ok):
+
+        print 'Ok:',ok.flag,'\tPara ->',id
 
         # Abrindo o socket
         meu_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -83,7 +98,7 @@ class Processo:
         meu_socket.connect(server_address)
 
         # Enviando o ok para o remetente
-        ok = Ok(id)
+        # ok = Ok(id, flag)
         ok_codificado = pickle.dumps(ok)
         meu_socket.send(ok_codificado)
         meu_socket.close()
@@ -93,15 +108,24 @@ class Processo:
 
         #se for uma mensagem de coordenador envia para todos os processos
         if mensagem.flag == 'C':
+            self.eleicao = False
+            print 'Acabou eleicao'
+            print 'Sou o novo coordenador'
             i = 0
         #se for eleicao envia apenas para os maiores
         elif mensagem.flag == 'E':
+            self.eleicao = True
+            print 'Esta tendo eleicao'
             i = self.id+1
-        elif mensagem.flag == 'T'
+
+        # Se for um teste de coordenador
+        elif mensagem.flag == 'T':
             i = mensagem.coordenador_atual
+            print 'Enviando mensagem para o coordenador (', i, ')'
 
         # Enviando a mensagem para processos
         while i < 5:
+
             # Abrindo o socket
             meu_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             server_address = ('localhost', 25000 + i)
@@ -112,25 +136,36 @@ class Processo:
             meu_socket.send(mensagem_codificada)
             meu_socket.close()
 
-            if mensagem.flag == 'T'
+            if mensagem.flag == 'T':
                 i = 54454
 
             i += 1
 
 
     def convoca_eleicao(self):
+
+        print 'Convocando uma eleição...'
         # cria uma mensagem do tipo eleicao
         mensagem = self.cria_msg(self.id, 'E')
 
+        self.coordenador_atual = -1
+        self.eleicao = True
+        print 'Esta tendo eleicao'
         #envia mensagem de eleicao
         self.envia_msg(mensagem)
 
-        #Timeout de resposta
+        #Timeout de resposta de 1 segundo
+        time.sleep(1)
 
+        # Se o coordenador atual continuar -1, serei o novo coordenador
+        if self.coordenador_atual == -1:
+            self.coordenador_atual = self.id
+            mensagem.flag = 'C'
 
-        #Se der timeout, envia mensagem de coordenador
-        mensagem.flag = 'C'
-        self.envia_msg(mensagem)
+            #Se der timeout, envia mensagem de coordenador
+            self.envia_msg(mensagem)
+            self.eleicao = False
+            print 'Acabou eleicao'
 
 # Definindo uma mensagem
 class Mensagem:
@@ -145,13 +180,13 @@ class Mensagem:
 
 # Definindo um ok
 class Ok:
-    def __init__(self, id, flag):
-        self.id = id
+    def __init__(self, id_processo, flag):
+        self.id_processo = id_processo
         self.flag = flag # E = Ok pra eleição T = ack da msg enviado ao coordenador
 
 
 # Definindo a thread que recebe dados
-def thread_recebe():
+def thread_recebe_msg():
     global processo
 
     while True:
@@ -184,7 +219,48 @@ def thread_recebe():
                     if isinstance(decodificada, (Mensagem)):
                         processo.recebe_msg(decodificada)
 
-                    elif isinstance(decodificada, (Ok)):
+                except Exception as e:
+                    print 'Erro ao receber:', e
+                    # exc_type, exc_obj, exc_tb = sys.exc_info()
+                    # fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                    # print(exc_type, fname, exc_tb.tb_lineno)
+
+        except Exception as e:
+            print 'Erro ao abrir o socket:', e
+            time.sleep(5)
+
+# Definindo a thread que recebe os oks
+def thread_recebe_ok():
+    global processo
+
+    while True:
+        serverPort = int(sys.argv[1])
+
+        # Criando o socket
+        serverSocket = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+
+        try:
+
+            # O socket fica ouvindo o meio
+            serverSocket.bind(('',serverPort))
+            serverSocket.listen(1)
+
+            while True:
+
+                # Se o processo estiver marcado como inativo, dorme
+                if not processo.ativo:
+                    time.sleep(50000)
+
+                # Aceita uma conexão
+                connectionSocket, addr = serverSocket.accept()
+
+                try:
+
+                    # Recebe os dados e os decodifica
+                    data = connectionSocket.recv(1024)
+                    decodificada = pickle.loads(data)
+
+                    if isinstance(decodificada, (Ok)):
                         processo.recebe_ok(decodificada)
 
                 except Exception as e:
@@ -201,12 +277,17 @@ def thread_recebe():
 def thread_gera():
     global processo
 
-    time.sleep(processo.id * 2)
+    time.sleep(processo.id * 3 + 3)
 
     while True:
         try:
+            # Se o processo estiver marcado como inativo, dorme
+            if not processo.ativo:
+                time.sleep(50000)
+
+            # print 'Id meu processo:', processo.id,'\tCoordenador atual:', processo.coordenador_atual
             # If para o coordenador nao mandar msg pra ele msm
-            if processo.coordenador_atual != processo.id & processo.ativo:
+            if (processo.coordenador_atual != processo.id) & processo.ativo & (not processo.eleicao):
                 # Envia msg pro coordenador
                 mensagem = processo.cria_msg(processo.id, 'T')
                 mensagem.coordenador_atual = processo.coordenador_atual
@@ -224,7 +305,7 @@ def thread_gera():
             # print(exc_type, fname, exc_tb.tb_lineno)
 
         # O processo ira requisitar o recurso em tempos aleatórios
-        time.sleep(9)
+        time.sleep(15)
 
 # Definindo a thread do clock
 def thread_clock():
@@ -253,15 +334,19 @@ def thread_input():
         if entrada == 'kill':
             processo.ativo = False
 
+        print 'Morri x.x'
+
 processo = Processo(randint(0,9), int(sys.argv[2]))
 print 'Processo:', sys.argv[2]
 
 # Main
 def main():
     PORT = sys.argv[1]
-    thread.start_new_thread(thread_recebe, ())
+    thread.start_new_thread(thread_recebe_msg, ())
+    thread.start_new_thread(thread_recebe_ok, ())
     thread.start_new_thread(thread_gera, ())
     thread.start_new_thread(thread_clock, ())
+    thread.start_new_thread(thread_input, ())
 
     signal.pause()
 
