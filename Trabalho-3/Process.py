@@ -1,9 +1,9 @@
 #coding: utf-8
 # python 2.7
-# Desenvolvido apenas para 3 processos, rodando nas portas 25000, 25001 e 25002
-# Com os IDs sendo 0, 1 e 2 respectivamente
+# Desenvolvido apenas para 5 processos, rodando nas portas 25000, 25001, 25002, 25003 e 25004
+# Com os IDs sendo 0, 1, 2, 3 e 4 respectivamente
 # Executar o programa passando no argumento a porta e o seu ID
-# Ex: python Process.py 25000 1
+# Ex: python Process.py 25000 0
 # Ou iniciar o start.py (Necessário sistema linux)
 
 
