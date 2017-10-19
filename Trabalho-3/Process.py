@@ -42,10 +42,10 @@ class Processo:
     # Definição do método que recebe mensagem
     def recebe_msg(self, msg):
 
-        #verifica se é uma mensagem de coordenador eleito
+        # Verifica se é uma mensagem de coordenador eleito
         if msg.flag == 'C':
             self.eleicao = False
-            # print 'Acabou eleicao'
+
             self.coordenador_atual = msg.id_processo
 
         # Se for mensagem de teste, responde com ok, que o coordenador está vivo
@@ -56,7 +56,7 @@ class Processo:
         # Se for requisição de eleição
         elif msg.flag == 'E':
             self.eleicao = True
-            # print 'Esta tendo eleicao'
+
             # Verifica qual o id maior, se o recebido for maior, envia ok
             if msg.id_processo < self.id:
                 ok = self.cria_ok(self.id, msg.flag)
@@ -98,7 +98,6 @@ class Processo:
         meu_socket.connect(server_address)
 
         # Enviando o ok para o remetente
-        # ok = Ok(id, flag)
         ok_codificado = pickle.dumps(ok)
         meu_socket.send(ok_codificado)
         meu_socket.close()
@@ -106,16 +105,15 @@ class Processo:
     # Definição do método que envia uma mensagem
     def envia_msg(self, mensagem):
 
-        #se for uma mensagem de coordenador envia para todos os processos
+        # Se for uma mensagem de coordenador envia para todos os processos
         if mensagem.flag == 'C':
             self.eleicao = False
-            # print 'Acabou eleicao'
-            # print 'Sou o novo coordenador'
             i = 0
-        #se for eleicao envia apenas para os maiores
+
+        # Se for eleicao envia apenas para os maiores
         elif mensagem.flag == 'E':
             self.eleicao = True
-            # print 'Esta tendo eleicao'
+
             i = self.id+1
 
         # Se for um teste de coordenador
@@ -144,20 +142,20 @@ class Processo:
 
     def convoca_eleicao(self):
 
-        # print 'Convocando uma eleição...'
-        # cria uma mensagem do tipo eleicao
+
+        # Cria uma mensagem do tipo eleicao
         mensagem = self.cria_msg(self.id, 'E')
 
         self.coordenador_atual = -1
         self.eleicao = True
-        # print 'Esta tendo eleicao'
-        #envia mensagem de eleicao
+
+        # Envia mensagem de eleicao
         self.envia_msg(mensagem)
 
-        #Timeout de resposta de 1 segundo
+        # Timeout de resposta de 1 segundo
         i = 1
         while i >= 0:
-            # print 'i =',i
+
             i -= 0.1
 
         # Se o coordenador atual continuar -1, serei o novo coordenador
@@ -168,7 +166,6 @@ class Processo:
             #Se der timeout, envia mensagem de coordenador
             self.envia_msg(mensagem)
             self.eleicao = False
-            # print 'Acabou eleicao'
 
 # Definindo uma mensagem
 class Mensagem:
@@ -247,15 +244,15 @@ def thread_gera():
             if not processo.ativo:
                 time.sleep(50000)
 
-            # print 'Id meu processo:', processo.id,'\tCoordenador atual:', processo.coordenador_atual
             # If para o coordenador nao mandar msg pra ele msm
             if (processo.coordenador_atual != processo.id) & processo.ativo & (not processo.eleicao):
-                # Envia msg pro coordenador
+
                 mensagem = processo.cria_msg(processo.id, 'T')
                 mensagem.coordenador_atual = processo.coordenador_atual
                 processo.coordenador_atual = -1
                 processo.envia_msg(mensagem)
-                # espera 1 segundo de time out para ver se recebe ok do coordenador
+
+                # Espera 1 segundo de time out para ver se recebe ok do coordenador
                 time.sleep(1)
                 if processo.coordenador_atual == -1:
                     processo.convoca_eleicao()
@@ -288,7 +285,6 @@ print 'Processo:', sys.argv[2]
 def main():
     PORT = sys.argv[1]
     thread.start_new_thread(thread_recebe, ())
-    # thread.start_new_thread(thread_recebe_ok, ())
     thread.start_new_thread(thread_gera, ())
     thread.start_new_thread(thread_input, ())
 
