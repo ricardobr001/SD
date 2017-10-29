@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include <string.h>
 #include "transfere.h"
 
 arquivoOut *transfere_arq_1_svc(arquivoIn *in, struct svc_req *rqstp)

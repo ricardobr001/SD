@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include <string.h>
 #include "transfere.h"
 
 int main(int argc, char *argv[])
@@ -8,7 +7,6 @@ int main(int argc, char *argv[])
 	FILE *arq;
 	arquivoIn in;
 	arquivoOut *out;
-
 
 	if (argc != 3)
 	{
