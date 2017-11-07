@@ -9,13 +9,13 @@ public class Server implements Transfere {
 
     public boolean envia(String nome, byte[] dados, int tamanho){
         try{
-            File arquivo = new File("foto-teste.jpg");
+            File arquivo = new File(nome);
             arquivo.createNewFile();
             FileOutputStream out = new FileOutputStream(arquivo,true);
             out.write(dados, 0, tamanho);
             out.flush();
             out.close();
-            System.out.println("Done writing data...");
+            System.out.println("Recebendo dados do arquivo " + nome + ".");
         }catch(Exception e){
             e.printStackTrace();
         }
