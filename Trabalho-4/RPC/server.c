@@ -10,17 +10,17 @@ arquivoOut *transfere_arq_1_svc(arquivoIn *in, struct svc_req *rqstp)
 	if (in->primPedaco)
 	{
 		arq = fopen(in->nome, "w");
-		printf("Criando o arquivo %s.\n", in->nome);
+		printf("Criando o arquivo %s...\n", in->nome);
 	}
 	else
 	{
 		arq = fopen(in->nome, "a");
-		printf("Recebendo dados do arquivo %s.\n", in->nome);
+		printf("Recebendo dados do arquivo %s...\n", in->nome);
 	}
 
 	if (arq == NULL)
 	{
-		printf("Disco cheio!\n");
+		printf("Problema para abrir ou criar o arquivo %s!\n", in->nome);
 		out.ok = 0;
 		return &out;
 	}

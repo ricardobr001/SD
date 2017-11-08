@@ -35,6 +35,7 @@ int main(int argc, char *argv[])
 	in.tam = 0;
 	in.primPedaco = 1;
 
+	printf("Enviando o arquivo %s...\n", argv[2]);
 	while(1)
 	{
 		in.tam = fread(in.dados, 1, MAXARQUIVO, arq);

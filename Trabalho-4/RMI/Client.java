@@ -4,6 +4,7 @@ import java.io.*;
 
 public class Client {
     public static void main(String[] args) {
+        System.setProperty("java.rmi.server.hostname", "192.168.0.10");
 
         if (args.length != 2) {
             System.out.println("MODO DE USAR: java Client <IP do server> <nome do arquivo>");
@@ -16,12 +17,13 @@ public class Client {
             FileInputStream entrada = new FileInputStream(args[1]);
             int qtddLida = entrada.read(dados);
 
+            System.out.println("Enviando o arquivo " + args[1] + "...");
             while (qtddLida > 0) {
-                boolean response = stub.envia(args[1], dados, qtddLida);
-                System.out.println("Transferido " + qtddLida + " bytes do arquivo " + args[1]);
+                stub.envia(args[1], dados, qtddLida);
                 qtddLida = entrada.read(dados);
             }
 
+            System.out.println("Arquivo " + args[1] + " enviado!");
         } catch (Exception e) {
             System.err.println("Client exception: " + e.toString());
             e.printStackTrace();
