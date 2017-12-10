@@ -7,46 +7,78 @@
 ########################################################
 
 import time
+import os
 from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler
+from watchdog.events import *
 
 
-class Watcher:
-    DIRECTORY_TO_WATCH = "files"
+class Dropbox(PatternMatchingEventHandler):
+    def __init__(self, host):
+        super(Dropbox, self).__init__()
+        self.host = host
+        self.listaArquivosLocal = os.listdir(DIRETORIO)  # Recuperando a lista com o nome dos arquivos no computador local
+        self.listaArquivosNuvem = []
+        self.enviando = False
 
-    def __init__(self):
-        self.observer = Observer()
+    def inicia(self):
+        obs = Observer()
+        obs.schedule(self, DIRETORIO, recursive=True)
+        obs.start()
 
-    def run(self):
-        event_handler = Handler()
-        self.observer.schedule(event_handler, self.DIRECTORY_TO_WATCH, recursive=True)
-        self.observer.start()
         try:
             while True:
                 time.sleep(5)
+                self.atualiza()
         except:
-            self.observer.stop()
-            print "Error"
+            obs.stop()
+        obs.join()
 
-        self.observer.join()
+    def enviaArquivo(self, nomeArquivo):
+        arquivo = open(nomeArquivo, 'r')
+        conteudo = arquivo.read()
+        self.enviando = True
+        print 'Enviando o arquivo %s...      EFETUAR CONEXÃO COM SERVER' % (nomeArquivo.split('/')[1])
+        self.enviando = False
+    
+    def enviaRemovido(self, nomeArquivo):
+        print 'Removendo o arquivo %s...        EFETUAR CONEXÃO COM O SERVER' % (nomeArquivo)
+        
+    def on_created(self, event):
+        if (not event.src_path) == 'files' & (not self.enviando):   # Ignora quando o diretório foi modificado
+            self.enviaArquivo(event.src_path)
 
+    def on_modified(self, event):
+        if (not event.src_path) == 'files' & (not self.enviando):   # Ignora quando o diretório foi modificado
+            self.enviaArquivo(event.src_path)
 
-class Handler(FileSystemEventHandler):
+    def on_deleted(self, event):
+        if (not event.src_path) == 'files' & (not self.enviando):   # Ignora quando o diretório foi modificado
+            self.enviaRemovido(event.src_path.split('/')[1])
+            self.listaArquivos = os.listdir(DIRETORIO)  # Atualiza a lista de arquivos no diretório
+            print self.listaArquivos
 
-    @staticmethod
-    def on_any_event(event):
-        if event.is_directory:
-            return None
+    def atualiza(self):
+        self.listaArquivos = os.listdir(DIRETORIO)      # Sempre atualiza a lista de arquivos
+        self.recebeListaArquivos()
+        
+    def recebeListaArquivos(self):
+        print 'Fazer -> RECEBE LISTA DE ARQUIVOS'
+        self.listaArquivosNuvem = ['nuvem.txt']
 
-        elif event.event_type == 'created':
-            # Take any action here when a file is first created.
-            print "Received created event - %s." % event.src_path
+        if self.listaArquivosLocal != self.listaArquivosNuvem:
+            print 'Atualiza a lista de arquivos local'
 
-        elif event.event_type == 'modified':
-            # Taken any action here when a file is modified.
-            print "Received modified event - %s." % event.src_path
+            for i in range(len(self.listaArquivosNuvem)):
+                if not self.listaArquivosNuvem[i] in self.listaArquivosLocal:
+                    self.download(self.listaArquivosNuvem[i])
+    
+    def download(self, nomeArquivo):
+        print 'Efetuando download do arquivo %s...' % (nomeArquivo)
 
+DIRETORIO = 'files'
+HOST = 'http://localhost:25000/'
 
 if __name__ == '__main__':
-    w = Watcher()
-    w.run()
+    print 'Aperte CTRL+C para parar a execução do programa'
+    d = Dropbox(HOST)
+    d.inicia()
