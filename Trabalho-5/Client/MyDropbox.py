@@ -20,12 +20,11 @@ from watchdog.events import *
 
 
 class Dropbox(PatternMatchingEventHandler):
-    def __init__(self, host):
+    def __init__(self):
         super(Dropbox, self).__init__()
-        self.host = host
         self.listaArquivosLocal = os.listdir(DIRETORIO)  # Recuperando a lista com o nome dos arquivos no computador local
         self.listaArquivosNuvem = []
-        self.enviando = False
+        self.enviarArquivos = []
 
     def inicia(self):
         obs = Observer()
@@ -44,32 +43,36 @@ class Dropbox(PatternMatchingEventHandler):
         arquivo = open(nomeArquivo, 'r')
         conteudo = arquivo.read()
         self.enviando = True
-        print 'Enviando o arquivo %s...      EFETUAR CONEXÃO COM SERVER' % (nomeArquivo.split('/')[1])
+        print 'Enviando o arquivo %s...' % (nomeArquivo.split('/')[1])
+        file_ = {'file': (nomeArquivo, open('files/' + nomeArquivo))}
+        r = requests.post(HOST + 'ReceberArquivo', files=file_)
+        print r.text
         self.enviando = False
     
     def enviaRemovido(self, nomeArquivo):
+
         print 'Removendo o arquivo %s...        EFETUAR CONEXÃO COM O SERVER' % (nomeArquivo)
         
     def on_created(self, event):
-        if (not event.src_path) == 'files' & (not self.enviando):   # Ignora quando o diretório foi modificado
+        if not event.src_path == 'files':   # Ignora quando o diretório foi modificado
             self.enviaArquivo(event.src_path)
+        else:
+            self.enviarArquivos.append(event.src_path)
 
     def on_modified(self, event):
-        if (not event.src_path) == 'files' & (not self.enviando):   # Ignora quando o diretório foi modificado
+        if not event.src_path == 'files':   # Ignora quando o diretório foi modificado
             self.enviaArquivo(event.src_path)
+        else:
+            self.enviarArquivos.append(event.src_path)
 
     def on_deleted(self, event):
-        if (not event.src_path) == 'files' & (not self.enviando):   # Ignora quando o diretório foi modificado
+        if not event.src_path == 'files':   # Ignora quando o diretório foi modificado
             self.enviaRemovido(event.src_path.split('/')[1])
             self.listaArquivos = os.listdir(DIRETORIO)  # Atualiza a lista de arquivos no diretório
-            print self.listaArquivos
 
     def atualiza(self):
-        # self.listaArquivos = os.listdir(DIRETORIO)      # Sempre atualiza a lista de arquivos
-        # self.recebeListaArquivos()
-        
-        # r = requests.get('http://127.0.0.1:5000/ListaArquivos')                   # FUNCIONA    
-        # print r.text
+        self.listaArquivos = os.listdir(DIRETORIO)      # Sempre atualiza a lista de arquivos
+        self.recebeListaArquivos()
         
         # r = requests.get('http://127.0.0.1:5000/EnviarArquivo/'+'teste.txt')      # FUNCIONA
         # print r.text
@@ -80,23 +83,23 @@ class Dropbox(PatternMatchingEventHandler):
 
         
     def recebeListaArquivos(self):
-        print 'Fazer -> RECEBE LISTA DE ARQUIVOS'
-        self.listaArquivosNuvem = ['nuvem.txt']
+        r = requests.get(HOST + 'ListaArquivos')
+        self.listaArquivosNuvem = r.text.split('/')
 
-        if self.listaArquivosLocal != self.listaArquivosNuvem:
-            print 'Atualiza a lista de arquivos local'
-
-            for i in range(len(self.listaArquivosNuvem)):
-                if not self.listaArquivosNuvem[i] in self.listaArquivosLocal:
-                    self.download(self.listaArquivosNuvem[i])
+        for i in range(len(self.listaArquivosNuvem)):
+            if not self.listaArquivosNuvem[i] in self.listaArquivosLocal:
+                self.download(self.listaArquivosNuvem[i])
     
     def download(self, nomeArquivo):
+        r = requests.get(HOST + 'Download/' + nomeArquivo)
         print 'Efetuando download do arquivo %s...' % (nomeArquivo)
+        arquivo = open('files/' + nomeArquivo)
+        arquivo.write(r.text)
 
 DIRETORIO = 'files'
-HOST = 'http://localhost:25000/'
+HOST = 'http://127.0.0.1:5000/'
 
 if __name__ == '__main__':
     print 'Aperte CTRL+C para parar a execução do programa'
-    d = Dropbox(HOST)
+    d = Dropbox()
     d.inicia()

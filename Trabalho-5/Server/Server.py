@@ -26,11 +26,11 @@ DIRETORIO = 'files'
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = DIRETORIO
 
-@app.route('/ListaArquivosServer')
+@app.route('/ListaArquivos')
 def listaArquivos():
-    return ';'.join(os.listdir(DIRETORIO))
+    return '/'.join(os.listdir(DIRETORIO))
 
-@app.route('/EnviarArquivo/<string:nome>')
+@app.route('/Download/<string:nome>')
 def enviaArquivo(nome):
     arquivo = open('files/'+nome)
     conteudo = arquivo.read()
