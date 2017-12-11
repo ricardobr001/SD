@@ -1,13 +1,20 @@
 #coding: utf-8
-# python 2.7
 
-########################################################
-# Nome: Leonardo Zaccarias              RA: 620491     #
-# Nome: Ricardo Mendes Leal Junior      RA: 562262     #
-########################################################
+'''
+    python 2.7
+    Dropbox cliente
+
+    Nome: Leonardo Zaccarias              RA: 620491
+    Nome: Ricardo Mendes Leal Junior      RA: 562262
+
+    Necessário API watchdog
+
+    Caso não instalada -- pip install watchdog
+'''
 
 import time
 import os
+import requests
 from watchdog.observers import Observer
 from watchdog.events import *
 
@@ -58,8 +65,19 @@ class Dropbox(PatternMatchingEventHandler):
             print self.listaArquivos
 
     def atualiza(self):
-        self.listaArquivos = os.listdir(DIRETORIO)      # Sempre atualiza a lista de arquivos
-        self.recebeListaArquivos()
+        # self.listaArquivos = os.listdir(DIRETORIO)      # Sempre atualiza a lista de arquivos
+        # self.recebeListaArquivos()
+        
+        # r = requests.get('http://127.0.0.1:5000/ListaArquivos')                   # FUNCIONA    
+        # print r.text
+        
+        # r = requests.get('http://127.0.0.1:5000/EnviarArquivo/'+'teste.txt')      # FUNCIONA
+        # print r.text
+        
+        # file_ = {'file': ('enviar.txt', open('files/enviar.txt'))}                # FUNCIONA
+        # r = requests.post('http://127.0.0.1:5000/ReceberArquivo', files=file_)
+        # print r.text
+
         
     def recebeListaArquivos(self):
         print 'Fazer -> RECEBE LISTA DE ARQUIVOS'
