@@ -46,3 +46,24 @@ def recebeArquivo():
             filename = secure_filename(file.filename)
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
             return 'Arquivo ' + filename + ' salvo'
+
+@app.route('/RemoverArquivo/<string:nome>')
+def removeArquivo(nome):
+    os.remove('files/'+nome)
+    arquivo = open('removidos.txt', 'a')
+    arquivo.write(nome + ' ' + time.strftime('%x %X') + '\n')
+    return 'Arquivo' + nome + 'removido'
+
+@app.route('/Removidos')
+def removidos():
+    arquivo = open('removidos.txt')
+    conteudo = arquivo.read()
+    return conteudo
+
+@app.route('/AtualizaRemovidos', methods=['GET', 'POST'])
+def atualizaRemovidos():
+    if request.method == 'POST':
+        file = request.files['file']
+        arquivo = open('removidos.txt', 'w')
+        conteudo = arquivo.write()
+        return 'success'
