@@ -28,11 +28,13 @@ app.config['UPLOAD_FOLDER'] = DIRETORIO
 
 @app.route('/ListaArquivos')
 def listaArquivos():
+    if not os.path.exists(DIRETORIO):   # Se não existe o diretório
+        os.makedirs(DIRETORIO)  # Cria o diretorio
     return str('/'.join(os.listdir(DIRETORIO)))
 
 @app.route('/download/<path:nome>', methods=['GET', 'POST'])    # Do server para o cliente
 def download(nome):
-    return send_from_directory(directory=app.config['UPLOAD_FOLDER'], filename=nome)
+    return send_from_directory(directory=app.config['UPLOAD_FOLDER'], filename=nome)    # Retorna o arquivo para o cliente
 
 @app.route('/upload', methods=['GET', 'POST'])  # Do cliente para o server
 def upload():    
@@ -42,24 +44,24 @@ def upload():
             filename = secure_filename(file.filename)
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
 
-            arquivo = open('removidos.txt')
-            conteudo = arquivo.read().split('\n')
+            arquivo = open('removidos.txt')     # Abrindo o arquivo especial de removidos
+            conteudo = arquivo.read().split('\n')   # Pega linha por linha
             arquivo.close()
 
-            arquivo = open('removidos.txt', 'w')
+            arquivo = open('removidos.txt', 'w')    # Sobrescreve o arquivo especial
             for i in range(len(conteudo)):
-                if conteudo[i] == filename or conteudo[i] == '\n':
-                    pass
+                if conteudo[i] == filename or conteudo[i] == '\n':  # Se for um arquivo ja removido e está inserindo novamente
+                    pass    # Não escreve no arquivo especial
                 else:
-                    arquivo.write(conteudo[i] + '\n')
+                    arquivo.write(conteudo[i] + '\n')   # Se não escreve
                     
             return 'Arquivo ' + filename + ' salvo'
 
 @app.route('/RemoverArquivo/<string:nome>')
 def removeArquivo(nome):
-    os.remove('files/'+nome)
-    arquivo = open('removidos.txt', 'a')
-    arquivo.write(nome + '\n') # + ' ' + time.strftime('%x %X') + 
+    os.remove('files/'+nome)    # Remove o arquivo
+    arquivo = open('removidos.txt', 'a')    # Anota o arquivo no arquivo especial
+    arquivo.write(nome + '\n')
     arquivo.close()
     return 'Arquivo ' + nome + ' removido'
 
@@ -68,7 +70,7 @@ def removidos():
     arquivo = open('removidos.txt')
     conteudo = arquivo.read()
     arquivo.close()
-    return str(conteudo)
+    return str(conteudo)    # Retorna a lista de arquivos removidos
 
 @app.route('/AtualizaRemovidos', methods=['GET', 'POST'])
 def atualizaRemovidos():

@@ -10,6 +10,8 @@
     Necessário API watchdog
 
     Caso não instalada -- pip install watchdog
+
+    link da nuvem: https://dropbox-sd-2017.herokuapp.com/
 '''
 
 import time
@@ -35,8 +37,8 @@ class Dropbox(PatternMatchingEventHandler):
 
         try:
             while True:
-                time.sleep(5)
-                self.atualiza()
+                self.atualiza()     # Atualiza a lista de arquivos local e da nuvem
+                time.sleep(5)       # Dorme a cada 5 segundos
         except:
             obs.stop()
         obs.join()
@@ -88,7 +90,6 @@ class Dropbox(PatternMatchingEventHandler):
             print 'Nenhum arquivo salvo na nuvem e no diretório local'
     
     def remove_server(self, nomeArquivo):
-        # self.removidos.append(nomeArquivo)
         print 'Removendo o arquivo %s...' % (nomeArquivo)
         r = requests.get(HOST + 'RemoverArquivo/' + nomeArquivo)
         print r.text
