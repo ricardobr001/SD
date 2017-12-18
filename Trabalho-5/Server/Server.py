@@ -30,28 +30,38 @@ app.config['UPLOAD_FOLDER'] = DIRETORIO
 def listaArquivos():
     return str('/'.join(os.listdir(DIRETORIO)))
 
-@app.route('/Download/<path:nome>', methods=['GET', 'POST'])
-def enviaArquivo(nome):
+@app.route('/download/<path:nome>', methods=['GET', 'POST'])    # Do server para o cliente
+def download(nome):
     return send_from_directory(directory=app.config['UPLOAD_FOLDER'], filename=nome)
 
-@app.route('/ReceberArquivo', methods=['GET', 'POST'])
-def recebeArquivo():
+@app.route('/upload', methods=['GET', 'POST'])  # Do cliente para o server
+def upload():    
     if request.method == 'POST':
         file = request.files['file']
-        # if user does not select file, browser also
-        # submit a empty part without filename
         if file:
             filename = secure_filename(file.filename)
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+
+            arquivo = open('removidos.txt')
+            conteudo = arquivo.read().split('\n')
+            arquivo.close()
+
+            arquivo = open('removidos.txt', 'w')
+            for i in range(len(conteudo)):
+                if conteudo[i] == filename or conteudo[i] == '\n':
+                    pass
+                else:
+                    arquivo.write(conteudo[i] + '\n')
+                    
             return 'Arquivo ' + filename + ' salvo'
 
 @app.route('/RemoverArquivo/<string:nome>')
 def removeArquivo(nome):
     os.remove('files/'+nome)
     arquivo = open('removidos.txt', 'a')
-    arquivo.write(nome + ' ' + time.strftime('%x %X') + '\n')
+    arquivo.write(nome + '\n') # + ' ' + time.strftime('%x %X') + 
     arquivo.close()
-    return 'Arquivo' + nome + 'removido'
+    return 'Arquivo ' + nome + ' removido'
 
 @app.route('/Removidos')
 def removidos():
