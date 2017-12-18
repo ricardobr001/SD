@@ -14,6 +14,7 @@
 
 import time
 import os
+import sys
 import requests
 import shutil
 from watchdog.observers import Observer
@@ -39,28 +40,13 @@ class Dropbox(PatternMatchingEventHandler):
         except:
             obs.stop()
         obs.join()
-
-    def enviaArquivo(self, nomeArquivo):
-        arquivo = open(nomeArquivo, 'r')
-        conteudo = arquivo.read()
-        print 'Enviando o arquivo %s...' % (nomeArquivo.split('/')[1])
-        file_ = {'file': (nomeArquivo, open('files/' + nomeArquivo))}
-        r = requests.post(HOST + 'ReceberArquivo', files=file_)
-        print r.text
     
     def enviaRemovido(self, nomeArquivo):
-
         print 'Removendo o arquivo %s...        EFETUAR CONEXÃO COM O SERVER' % (nomeArquivo)
-        
-    def on_created(self, event):
-        if not event.src_path == 'files':   # Ignora quando o diretório foi modificado
-            print 'Criado:',event.src_path.split('/')[1]
-            # self.enviaArquivo(event.src_path)
 
     def on_modified(self, event):
         if not event.src_path == 'files':   # Ignora quando o diretório foi modificado
-            print 'Modificado:',event.src_path.split('/')[1]
-            # self.enviaArquivo(event.src_path)
+            self.upload(event.src_path)
 
     def on_deleted(self, event):
         if not event.src_path == 'files':   # Ignora quando o diretório foi modificado
@@ -71,41 +57,47 @@ class Dropbox(PatternMatchingEventHandler):
         self.listaArquivosLocal = os.listdir(DIRETORIO)      # Sempre atualiza a lista de arquivos
         self.recebeListaArquivos()
         
-        
-        # r = requests.get('http://127.0.0.1:5000/EnviarArquivo/'+'teste.txt')      # FUNCIONA
-        # print r.text
-        
-        # file_ = {'file': ('enviar.txt', open('files/enviar.txt'))}                # FUNCIONA
-        # r = requests.post('http://127.0.0.1:5000/ReceberArquivo', files=file_)
-        # print r.text
-
-        
     def recebeListaArquivos(self):
         r = requests.get(HOST + 'ListaArquivos')
-        if not r.text == '':
-            self.listaArquivosNuvem = r.text.split('/')
-            self.decodifica()
-            print 'Lista de arquivos local:', self.listaArquivosLocal
-            print 'Lista de arquivos nuvem:', self.listaArquivosNuvem
+        if not r.text == '':    # Se tiver arquivos no server
+            self.listaArquivosNuvem = r.text.split('/') # Separando a lista recebida 
+            self.decodifica()   # Decodifando a lista
 
-            for i in range(len(self.listaArquivosNuvem)):
-                if not str(self.listaArquivosNuvem[i]) in self.listaArquivosLocal:
-                    self.download(self.listaArquivosNuvem[i])
+            for i in range(len(self.listaArquivosNuvem)):   # Andando a lista de arquivos da nuvem
+                if not str(self.listaArquivosNuvem[i]) in self.listaArquivosLocal:  # Se encontrar um arquivo da nuvem que não está no local
+                    self.download(self.listaArquivosNuvem[i])   # Efetua o download
+
+        elif len(self.listaArquivosLocal) > 0:  # Se tiver arquivos no local
+            for i in range(len(self.listaArquivosLocal)):   # Andando a lista de arquivos local
+                if not str(self.listaArquivosLocal[i]) in self.listaArquivosNuvem:  # Se encontrar um arquivod local que não está na nuvem
+                    self.upload(self.listaArquivosLocal[i])   # Efetua o upload
         else:
-            print 'Nenhum arquivo salvo na nuvem'
+            print 'Nenhum arquivo salvo na nuvem e no diretório local'
     
     def download(self, nomeArquivo):
-        r = requests.get(HOST + 'Download/' + nomeArquivo, stream=True)
+        r = requests.get(HOST + 'Download/' + nomeArquivo, stream=True) # Recebendo o arquivo pelo método get
         print 'Efetuando download do arquivo %s...' % (nomeArquivo)
-        with open(DIRETORIO + '/' + nomeArquivo, 'wb') as out_file:
-            shutil.copyfileobj(r.raw, out_file)
+        with open(DIRETORIO + '/' + nomeArquivo, 'wb') as out_file:     # Recebe os dados do stream criado
+            shutil.copyfileobj(r.raw, out_file)     # Escreve os dados no arquivo
+        del r
+    
+    def upload(self, nomeArquivo):
+        print 'Enviando o arquivo %s...' % (nomeArquivo)
+        file_ = {'file': (nomeArquivo, open('files/' + nomeArquivo))}   # Abrindo o arquivo
+        r = requests.post(HOST + 'ReceberArquivo', files=file_)         # Enviando o arquivo pelo metódo post ao server
+        print r.text    # Imprimindo a respota do server
         del r
 
     def decodifica(self):
         for i in range(len(self.listaArquivosNuvem)):
             self.listaArquivosNuvem[i] = self.listaArquivosNuvem[i].encode('utf8')
+
+if len(sys.argv) > 1:
+    HOST = sys.argv[1]
+else:
+    HOST = 'http://127.0.0.1:5000/'
+
 DIRETORIO = 'files'
-HOST = 'http://127.0.0.1:5000/'
 
 if __name__ == '__main__':
     print 'Aperte CTRL+C para parar a execução do programa'
