@@ -28,13 +28,13 @@ app.config['UPLOAD_FOLDER'] = DIRETORIO
 
 @app.route('/ListaArquivos')
 def listaArquivos():
-    return '/'.join(os.listdir(DIRETORIO))
+    return str('/'.join(os.listdir(DIRETORIO)))
 
 @app.route('/Download/<string:nome>')
 def enviaArquivo(nome):
     arquivo = open('files/'+nome)
     conteudo = arquivo.read()
-    return conteudo
+    return str(conteudo)
 
 @app.route('/ReceberArquivo', methods=['GET', 'POST'])
 def recebeArquivo():
@@ -52,13 +52,15 @@ def removeArquivo(nome):
     os.remove('files/'+nome)
     arquivo = open('removidos.txt', 'a')
     arquivo.write(nome + ' ' + time.strftime('%x %X') + '\n')
+    arquivo.close()
     return 'Arquivo' + nome + 'removido'
 
 @app.route('/Removidos')
 def removidos():
     arquivo = open('removidos.txt')
     conteudo = arquivo.read()
-    return conteudo
+    arquivo.close()
+    return str(conteudo)
 
 @app.route('/AtualizaRemovidos', methods=['GET', 'POST'])
 def atualizaRemovidos():
@@ -66,4 +68,5 @@ def atualizaRemovidos():
         file = request.files['file']
         arquivo = open('removidos.txt', 'w')
         conteudo = arquivo.write()
+        arquivo.close()
         return 'success'

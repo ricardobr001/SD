@@ -42,12 +42,10 @@ class Dropbox(PatternMatchingEventHandler):
     def enviaArquivo(self, nomeArquivo):
         arquivo = open(nomeArquivo, 'r')
         conteudo = arquivo.read()
-        self.enviando = True
         print 'Enviando o arquivo %s...' % (nomeArquivo.split('/')[1])
         file_ = {'file': (nomeArquivo, open('files/' + nomeArquivo))}
         r = requests.post(HOST + 'ReceberArquivo', files=file_)
         print r.text
-        self.enviando = False
     
     def enviaRemovido(self, nomeArquivo):
 
@@ -55,15 +53,13 @@ class Dropbox(PatternMatchingEventHandler):
         
     def on_created(self, event):
         if not event.src_path == 'files':   # Ignora quando o diretório foi modificado
-            self.enviaArquivo(event.src_path)
-        else:
-            self.enviarArquivos.append(event.src_path)
+            print 'Criado:',event.src_path.split('/')[1]
+            # self.enviaArquivo(event.src_path)
 
     def on_modified(self, event):
         if not event.src_path == 'files':   # Ignora quando o diretório foi modificado
-            self.enviaArquivo(event.src_path)
-        else:
-            self.enviarArquivos.append(event.src_path)
+            print 'Modificado:',event.src_path.split('/')[1]
+            # self.enviaArquivo(event.src_path)
 
     def on_deleted(self, event):
         if not event.src_path == 'files':   # Ignora quando o diretório foi modificado
@@ -71,8 +67,9 @@ class Dropbox(PatternMatchingEventHandler):
             self.listaArquivos = os.listdir(DIRETORIO)  # Atualiza a lista de arquivos no diretório
 
     def atualiza(self):
-        self.listaArquivos = os.listdir(DIRETORIO)      # Sempre atualiza a lista de arquivos
+        self.listaArquivosLocal = os.listdir(DIRETORIO)      # Sempre atualiza a lista de arquivos
         self.recebeListaArquivos()
+        
         
         # r = requests.get('http://127.0.0.1:5000/EnviarArquivo/'+'teste.txt')      # FUNCIONA
         # print r.text
@@ -84,18 +81,27 @@ class Dropbox(PatternMatchingEventHandler):
         
     def recebeListaArquivos(self):
         r = requests.get(HOST + 'ListaArquivos')
-        self.listaArquivosNuvem = r.text.split('/')
+        if not r.text == '':
+            self.listaArquivosNuvem = r.text.split('/')
+            self.decodifica()
+            print 'Lista de arquivos local:', self.listaArquivosLocal
+            print 'Lista de arquivos nuvem:', self.listaArquivosNuvem
 
-        for i in range(len(self.listaArquivosNuvem)):
-            if not self.listaArquivosNuvem[i] in self.listaArquivosLocal:
-                self.download(self.listaArquivosNuvem[i])
+            for i in range(len(self.listaArquivosNuvem)):
+                if not str(self.listaArquivosNuvem[i]) in self.listaArquivosLocal:
+                    self.download(self.listaArquivosNuvem[i])
+        else:
+            print 'Nenhum arquivo salvo na nuvem'
     
     def download(self, nomeArquivo):
         r = requests.get(HOST + 'Download/' + nomeArquivo)
         print 'Efetuando download do arquivo %s...' % (nomeArquivo)
-        arquivo = open('files/' + nomeArquivo)
-        arquivo.write(r.text)
+        arquivo = open('files/' + nomeArquivo, 'w')
+        arquivo.write(r.text.encode('utf8'))
 
+    def decodifica(self):
+        for i in range(len(self.listaArquivosNuvem)):
+            self.listaArquivosNuvem[i] = self.listaArquivosNuvem[i].encode('utf8')
 DIRETORIO = 'files'
 HOST = 'http://127.0.0.1:5000/'
 
