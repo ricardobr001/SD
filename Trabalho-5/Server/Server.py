@@ -18,7 +18,7 @@
 
 import time
 import os
-from flask import Flask, request, redirect, url_for
+from flask import Flask, request, redirect, url_for, current_app, send_from_directory
 from werkzeug.utils import secure_filename
 
 DIRETORIO = 'files'
@@ -30,11 +30,9 @@ app.config['UPLOAD_FOLDER'] = DIRETORIO
 def listaArquivos():
     return str('/'.join(os.listdir(DIRETORIO)))
 
-@app.route('/Download/<string:nome>')
+@app.route('/Download/<path:nome>', methods=['GET', 'POST'])
 def enviaArquivo(nome):
-    arquivo = open('files/'+nome)
-    conteudo = arquivo.read()
-    return str(conteudo)
+    return send_from_directory(directory=app.config['UPLOAD_FOLDER'], filename=nome)
 
 @app.route('/ReceberArquivo', methods=['GET', 'POST'])
 def recebeArquivo():

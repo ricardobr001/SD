@@ -15,6 +15,7 @@
 import time
 import os
 import requests
+import shutil
 from watchdog.observers import Observer
 from watchdog.events import *
 
@@ -94,10 +95,11 @@ class Dropbox(PatternMatchingEventHandler):
             print 'Nenhum arquivo salvo na nuvem'
     
     def download(self, nomeArquivo):
-        r = requests.get(HOST + 'Download/' + nomeArquivo)
+        r = requests.get(HOST + 'Download/' + nomeArquivo, stream=True)
         print 'Efetuando download do arquivo %s...' % (nomeArquivo)
-        arquivo = open('files/' + nomeArquivo, 'w')
-        arquivo.write(r.text.encode('utf8'))
+        with open(DIRETORIO + '/' + nomeArquivo, 'wb') as out_file:
+            shutil.copyfileobj(r.raw, out_file)
+        del r
 
     def decodifica(self):
         for i in range(len(self.listaArquivosNuvem)):
